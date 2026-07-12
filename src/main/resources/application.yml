@@ -1,0 +1,86 @@
+spring:
+  application:
+    name: impact-budget
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/impactbudget}
+    username: ${DB_USER:impactbudget}
+    password: ${DB_PASSWORD:impactbudget}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate          # schema is owned by Flyway, never Hibernate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: impact-budget
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.impactbudget.*"
+    listener:
+      ack-mode: record
+
+# --- Third-party integrations -------------------------------------------------
+plaid:
+  client-id: ${PLAID_CLIENT_ID:}
+  secret: ${PLAID_SECRET:}
+  environment: ${PLAID_ENV:sandbox}          # sandbox | production
+  # Public base URL Plaid can reach for webhooks (e.g. an ngrok tunnel in dev)
+  webhook-url: ${PLAID_WEBHOOK_URL:}
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-opus-4-8}
+
+# App-specific topic names, referenced from producers/consumers
+app:
+  kafka:
+    topics:
+      transactions-ingested: transactions.ingested
+      transactions-scored: transactions.scored
+
+# --- Observability ------------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+logging:
+  level:
+    com.impactbudget: ${APP_LOG_LEVEL:INFO}
