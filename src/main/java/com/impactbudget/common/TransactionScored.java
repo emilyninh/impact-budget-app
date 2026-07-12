@@ -14,6 +14,7 @@ import java.util.UUID;
 public record TransactionScored(
         UUID transactionId,
         String userId,
+        String merchantName,
         BigDecimal amount,
         LocalDate txnDate,
         String category,

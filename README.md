@@ -103,6 +103,14 @@ docker compose up -d postgres redpanda redis
 mvn spring-boot:run
 ```
 
+Frontend dev server (proxies `/api` to the backend on :8080):
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:5173
+```
+
 ## Testing
 
 ```bash
@@ -124,7 +132,9 @@ mvn verify        # unit + Testcontainers integration tests (needs Docker)
 - [x] **Step 5 — Budget & goals:** budget-owned `scored_transaction` projection from
       `TransactionScored`, spend-weighted monthly aggregates cached in Redis (invalidate on
       write, rebuild from Postgres on cold read), goal model + live progress tracking.
-- [ ] **Step 6 — Dashboard & UI:** REST API + React/Recharts frontend.
+- [x] **Step 6 — Dashboard & UI:** read API (`/api/dashboard/*`, `/api/goals`) over the
+      Redis-cached aggregate; React + TypeScript + Recharts frontend (impact summary,
+      local-vs-sustainability trend, goal tracker with progress bars, transaction list).
 - [ ] **Step 7 — Observability & tests:** Grafana dashboards, integration tests, README GIF.
 
 ## The impact‑scoring design

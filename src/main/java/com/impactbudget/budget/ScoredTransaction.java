@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -28,8 +29,14 @@ public class ScoredTransaction {
     @Column(name = "user_id", nullable = false)
     private String userId;
 
+    @Column(name = "merchant_name")
+    private String merchantName;
+
     @Column(name = "year_month", nullable = false)
     private String yearMonth;
+
+    @Column(name = "txn_date", nullable = false)
+    private LocalDate txnDate;
 
     @Column(name = "amount", nullable = false, precision = 14, scale = 2)
     private BigDecimal amount;
@@ -71,12 +78,28 @@ public class ScoredTransaction {
         this.userId = userId;
     }
 
+    public String getMerchantName() {
+        return merchantName;
+    }
+
+    public void setMerchantName(String merchantName) {
+        this.merchantName = merchantName;
+    }
+
     public String getYearMonth() {
         return yearMonth;
     }
 
     public void setYearMonth(String yearMonth) {
         this.yearMonth = yearMonth;
+    }
+
+    public LocalDate getTxnDate() {
+        return txnDate;
+    }
+
+    public void setTxnDate(LocalDate txnDate) {
+        this.txnDate = txnDate;
     }
 
     public BigDecimal getAmount() {

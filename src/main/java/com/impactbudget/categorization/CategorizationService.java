@@ -50,8 +50,8 @@ public class CategorizationService {
 
         saveImpactScore(event, scoring);
         publisher.publishScored(new TransactionScored(
-                event.transactionId(), event.userId(), event.amount(), event.txnDate(),
-                scoring.category(), scoring.localScore(), scoring.localIndependent(),
+                event.transactionId(), event.userId(), displayMerchant(scoring, event), event.amount(),
+                event.txnDate(), scoring.category(), scoring.localScore(), scoring.localIndependent(),
                 scoring.sustainabilityScore(), scoring.materialFlags(),
                 scoring.confidence(), scoring.source()));
 
@@ -113,6 +113,13 @@ public class CategorizationService {
         score.setConfidence(s.confidence());
         score.setSource(s.source());
         impactScoreRepository.save(score);
+    }
+
+    private String displayMerchant(MerchantScoring scoring, TransactionIngested event) {
+        if (scoring.cleanedMerchant() != null && !scoring.cleanedMerchant().isBlank()) {
+            return scoring.cleanedMerchant();
+        }
+        return event.merchantName() != null ? event.merchantName() : event.merchantRaw();
     }
 
     private MerchantScoring fromEntity(MerchantScore ms) {

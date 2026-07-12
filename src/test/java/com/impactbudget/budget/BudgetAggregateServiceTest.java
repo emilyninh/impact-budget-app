@@ -78,7 +78,7 @@ class BudgetAggregateServiceTest {
     void incomeAndRefundsAreNotRecorded() {
         // Negative amount = money in; must not create a scored_transaction row.
         TransactionScored refund = new TransactionScored(
-                UUID.randomUUID(), "user-1", new BigDecimal("-25.00"), LocalDate.of(2026, 7, 3),
+                UUID.randomUUID(), "user-1", "Some Store", new BigDecimal("-25.00"), LocalDate.of(2026, 7, 3),
                 "Refund", 0, false, 0, List.of(), 0.5, "FALLBACK");
 
         service.record(refund);
@@ -93,7 +93,7 @@ class BudgetAggregateServiceTest {
         when(repository.existsByTransactionId(txnId)).thenReturn(true);
 
         TransactionScored event = new TransactionScored(
-                txnId, "user-1", new BigDecimal("10.00"), LocalDate.of(2026, 7, 3),
+                txnId, "user-1", "Coffee Shop", new BigDecimal("10.00"), LocalDate.of(2026, 7, 3),
                 "Coffee", 90, true, 60, List.of(), 0.7, "LLM");
 
         service.record(event);

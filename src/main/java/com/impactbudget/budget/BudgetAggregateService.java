@@ -56,7 +56,9 @@ public class BudgetAggregateService {
         st.setId(UUID.randomUUID());
         st.setTransactionId(event.transactionId());
         st.setUserId(event.userId());
+        st.setMerchantName(event.merchantName());
         st.setYearMonth(yearMonth);
+        st.setTxnDate(event.txnDate());
         st.setAmount(event.amount());
         st.setLocalScore(event.localScore());
         st.setSustainabilityScore(event.sustainabilityScore());
@@ -90,6 +92,23 @@ public class BudgetAggregateService {
             log.warn("Redis write failed for {} ({}); serving uncached", key, e.toString());
         }
         return aggregate;
+    }
+
+    /** Trend of the last {@code months} monthly aggregates, oldest first (for the UI line chart). */
+    public List<BudgetAggregate> trend(String userId, int months) {
+        YearMonth current = YearMonth.now();
+        java.util.List<BudgetAggregate> out = new java.util.ArrayList<>();
+        for (int i = months - 1; i >= 0; i--) {
+            out.add(getMonthly(userId, current.minusMonths(i).toString()));
+        }
+        return out;
+    }
+
+    /** Recent scored transactions for a month, newest first (for the UI list). */
+    public List<ScoredTransactionView> recentTransactions(String userId, String yearMonth) {
+        return repository.findByUserIdAndYearMonthOrderByTxnDateDesc(userId, yearMonth).stream()
+                .map(ScoredTransactionView::from)
+                .toList();
     }
 
     private BudgetAggregate rebuild(String userId, String yearMonth) {

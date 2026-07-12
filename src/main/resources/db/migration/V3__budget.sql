@@ -7,7 +7,9 @@ CREATE TABLE scored_transaction (
     id                    UUID PRIMARY KEY,
     transaction_id        UUID         NOT NULL,
     user_id               VARCHAR(64)  NOT NULL,
+    merchant_name         VARCHAR(256),
     year_month            VARCHAR(7)   NOT NULL,      -- e.g. 2026-07
+    txn_date              DATE         NOT NULL,
     amount                NUMERIC(14, 2) NOT NULL,
     local_score           INT          NOT NULL,
     sustainability_score  INT          NOT NULL,
