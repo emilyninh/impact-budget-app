@@ -121,7 +121,9 @@ mvn verify        # unit + Testcontainers integration tests (needs Docker)
 - [x] **Step 4 — Categorization:** merchant normalization, `merchant_score` cache,
       seeded `curated_merchant` overrides, Claude scoring (keyless fallback), `impact_score`
       persistence, `TransactionScored` published.
-- [ ] **Step 5 — Budget & goals:** Redis aggregates, goal tracking.
+- [x] **Step 5 — Budget & goals:** budget-owned `scored_transaction` projection from
+      `TransactionScored`, spend-weighted monthly aggregates cached in Redis (invalidate on
+      write, rebuild from Postgres on cold read), goal model + live progress tracking.
 - [ ] **Step 6 — Dashboard & UI:** REST API + React/Recharts frontend.
 - [ ] **Step 7 — Observability & tests:** Grafana dashboards, integration tests, README GIF.
 
