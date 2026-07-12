@@ -118,7 +118,9 @@ mvn verify        # unit + Testcontainers integration tests (needs Docker)
       webhook listener, idempotent upsert on `plaid_transaction_id`, Resilience4j retry/backoff.
 - [x] **Step 3 — Kafka events:** `TransactionIngested` published on new rows (keyed by user),
       consumer scaffold in categorization; JSON serializers use Spring's ObjectMapper.
-- [ ] **Step 4 — Categorization:** merchant cache, curated overrides, Claude scoring.
+- [x] **Step 4 — Categorization:** merchant normalization, `merchant_score` cache,
+      seeded `curated_merchant` overrides, Claude scoring (keyless fallback), `impact_score`
+      persistence, `TransactionScored` published.
 - [ ] **Step 5 — Budget & goals:** Redis aggregates, goal tracking.
 - [ ] **Step 6 — Dashboard & UI:** REST API + React/Recharts frontend.
 - [ ] **Step 7 — Observability & tests:** Grafana dashboards, integration tests, README GIF.
@@ -131,12 +133,16 @@ three‑stage pipeline that keeps accuracy high and LLM cost low:
 1. **Normalize & cache.** Strip processor prefixes (`TST*`, `SQ*`), store IDs, and
    trailing digits, then look up a `merchant_score` table. A hit means _no LLM call_ —
    most spending repeats the same merchants.
-2. **Score on miss.** Call Claude with a strict JSON schema (structured outputs) to
-   clean the merchant, identify it, and assign a **Local score** and **Sustainability
-   score** with a rationale.
+2. **Score on miss.** Call Claude (`claude-opus-4-8`) with the target JSON schema
+   described in the system prompt; the response is parsed and validated with Jackson into
+   a typed result (**Local score**, **Sustainability score**, material flags, confidence,
+   rationale). If no API key is configured, or the call/parse fails, it falls back to a
+   neutral heuristic so the pipeline never blocks — the app runs keyless.
 3. **Apply curated overrides.** A seeded `curated_merchant` table (known national chains,
    the B‑Corp registry, known fast‑fashion/sustainable brands) is ground truth and
    _corrects_ the LLM. The curated table wins on conflict.
 
-This is honest about uncertainty (scores carry a confidence) while staying cheap and
-fast in steady state.
+Each impact score records its `source` (`LLM`, `CURATED`, `FALLBACK`, or `CACHE`), so a
+repeat merchant served from the cache is visibly distinct from a fresh LLM call — this is
+honest about uncertainty (scores carry a confidence) while staying cheap and fast in
+steady state.
