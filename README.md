@@ -96,7 +96,9 @@ docker compose up --build
 
 ### Local dev without Docker
 
-Requires JDK 17 and Maven 3.9+. Start the infra containers and run the app:
+The build **targets JDK 17** (matching CI). It also runs on newer JDKs — Byte Buddy is
+pinned to a current version and `net.bytebuddy.experimental` is set for the test JVMs, so
+Mockito works on JDK 24+ too. Requires Maven 3.9+. Start the infra containers and run the app:
 
 ```bash
 docker compose up -d postgres redpanda redis
