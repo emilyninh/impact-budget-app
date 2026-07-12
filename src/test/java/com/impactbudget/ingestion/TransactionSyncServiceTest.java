@@ -13,9 +13,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.impactbudget.common.TransactionIngested;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +31,8 @@ class TransactionSyncServiceTest {
     PlaidItemRepository itemRepository;
     @Mock
     BankTransactionRepository txnRepository;
+    @Mock
+    TransactionEventPublisher eventPublisher;
 
     @InjectMocks
     TransactionSyncService service;
@@ -80,6 +85,12 @@ class TransactionSyncServiceTest {
         // Cursor was persisted so the next sync resumes from here.
         assertThat(item.getTransactionsCursor()).isEqualTo("cursor-A");
         verify(itemRepository).save(item);
+
+        // A new row emits exactly one TransactionIngested event.
+        ArgumentCaptor<TransactionIngested> event = ArgumentCaptor.forClass(TransactionIngested.class);
+        verify(eventPublisher).publishIngested(event.capture());
+        assertThat(event.getValue().transactionId()).isEqualTo(row.getId());
+        assertThat(event.getValue().userId()).isEqualTo("user-1");
     }
 
     @Test
@@ -106,5 +117,8 @@ class TransactionSyncServiceTest {
         // Same row — idempotent: no duplicate, id unchanged, amount updated.
         assertThat(saved.getValue().getId()).isEqualTo(existingId);
         assertThat(saved.getValue().getAmount()).isEqualByComparingTo("9.99");
+
+        // A modification of an existing row must NOT re-emit an ingested event.
+        verify(eventPublisher, never()).publishIngested(any());
     }
 }

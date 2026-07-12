@@ -1,5 +1,6 @@
 package com.impactbudget.ingestion;
 
+import com.impactbudget.common.TransactionIngested;
 import com.plaid.client.model.Location;
 import com.plaid.client.model.PersonalFinanceCategory;
 import com.plaid.client.model.RemovedTransaction;
@@ -28,13 +29,16 @@ public class TransactionSyncService {
     private final PlaidGateway plaidGateway;
     private final PlaidItemRepository itemRepository;
     private final BankTransactionRepository txnRepository;
+    private final TransactionEventPublisher eventPublisher;
 
     public TransactionSyncService(PlaidGateway plaidGateway,
                                   PlaidItemRepository itemRepository,
-                                  BankTransactionRepository txnRepository) {
+                                  BankTransactionRepository txnRepository,
+                                  TransactionEventPublisher eventPublisher) {
         this.plaidGateway = plaidGateway;
         this.itemRepository = itemRepository;
         this.txnRepository = txnRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Sync a single Item identified by its Plaid {@code item_id} (as sent in webhooks). */
@@ -89,7 +93,8 @@ public class TransactionSyncService {
         BankTransaction e = txnRepository.findByPlaidTransactionId(t.getTransactionId())
                 .orElseGet(BankTransaction::new);
 
-        if (e.getId() == null) {
+        boolean isNew = e.getId() == null;
+        if (isNew) {
             e.setId(UUID.randomUUID());
             e.setPlaidTransactionId(t.getTransactionId());
             e.setPlaidItem(item);
@@ -114,6 +119,24 @@ public class TransactionSyncService {
         e.setPending(Boolean.TRUE.equals(t.getPending()));
 
         txnRepository.save(e);
-        // Step 3 will publish a TransactionIngested event here for newly-added rows.
+
+        // Publish only for newly-inserted rows so downstream scoring/aggregation isn't
+        // re-triggered on every modification re-sync. Fan-out happens on the broker side.
+        if (isNew) {
+            eventPublisher.publishIngested(toEvent(e));
+        }
+    }
+
+    private TransactionIngested toEvent(BankTransaction e) {
+        return new TransactionIngested(
+                e.getId(),
+                e.getUserId(),
+                e.getMerchantRaw(),
+                e.getMerchantName(),
+                e.getAmount(),
+                e.getIsoCurrency(),
+                e.getTxnDate(),
+                e.getLocationCity(),
+                e.getLocationRegion());
     }
 }

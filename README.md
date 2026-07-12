@@ -116,7 +116,8 @@ mvn verify        # unit + Testcontainers integration tests (needs Docker)
       smoke test, CI.
 - [x] **Step 2 — Plaid ingestion:** link/exchange endpoints, cursor-based `/transactions/sync`,
       webhook listener, idempotent upsert on `plaid_transaction_id`, Resilience4j retry/backoff.
-- [ ] **Step 3 — Kafka events:** `TransactionIngested` producer + consumer.
+- [x] **Step 3 — Kafka events:** `TransactionIngested` published on new rows (keyed by user),
+      consumer scaffold in categorization; JSON serializers use Spring's ObjectMapper.
 - [ ] **Step 4 — Categorization:** merchant cache, curated overrides, Claude scoring.
 - [ ] **Step 5 — Budget & goals:** Redis aggregates, goal tracking.
 - [ ] **Step 6 — Dashboard & UI:** REST API + React/Recharts frontend.
