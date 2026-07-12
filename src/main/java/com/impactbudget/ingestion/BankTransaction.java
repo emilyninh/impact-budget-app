@@ -6,9 +6,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
@@ -25,9 +22,6 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "bank_transaction")
-@Getter
-@Setter
-@NoArgsConstructor
 public class BankTransaction {
 
     @Id
@@ -75,4 +69,112 @@ public class BankTransaction {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getPlaidTransactionId() {
+        return plaidTransactionId;
+    }
+
+    public void setPlaidTransactionId(String plaidTransactionId) {
+        this.plaidTransactionId = plaidTransactionId;
+    }
+
+    public PlaidItem getPlaidItem() {
+        return plaidItem;
+    }
+
+    public void setPlaidItem(PlaidItem plaidItem) {
+        this.plaidItem = plaidItem;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getMerchantRaw() {
+        return merchantRaw;
+    }
+
+    public void setMerchantRaw(String merchantRaw) {
+        this.merchantRaw = merchantRaw;
+    }
+
+    public String getMerchantName() {
+        return merchantName;
+    }
+
+    public void setMerchantName(String merchantName) {
+        this.merchantName = merchantName;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public String getIsoCurrency() {
+        return isoCurrency;
+    }
+
+    public void setIsoCurrency(String isoCurrency) {
+        this.isoCurrency = isoCurrency;
+    }
+
+    public LocalDate getTxnDate() {
+        return txnDate;
+    }
+
+    public void setTxnDate(LocalDate txnDate) {
+        this.txnDate = txnDate;
+    }
+
+    public String getPlaidCategory() {
+        return plaidCategory;
+    }
+
+    public void setPlaidCategory(String plaidCategory) {
+        this.plaidCategory = plaidCategory;
+    }
+
+    public String getLocationCity() {
+        return locationCity;
+    }
+
+    public void setLocationCity(String locationCity) {
+        this.locationCity = locationCity;
+    }
+
+    public String getLocationRegion() {
+        return locationRegion;
+    }
+
+    public void setLocationRegion(String locationRegion) {
+        this.locationRegion = locationRegion;
+    }
+
+    public boolean isPending() {
+        return pending;
+    }
+
+    public void setPending(boolean pending) {
+        this.pending = pending;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 }
