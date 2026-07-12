@@ -2,6 +2,7 @@ package com.impactbudget.categorization;
 
 import com.impactbudget.common.TransactionIngested;
 import com.impactbudget.common.TransactionScored;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,17 +32,20 @@ public class CategorizationService {
     private final MerchantScoringClient scoringClient;
     private final ImpactScoreRepository impactScoreRepository;
     private final TransactionScoredPublisher publisher;
+    private final MeterRegistry meterRegistry;
 
     public CategorizationService(MerchantScoreRepository merchantScoreRepository,
                                  CuratedOverrideService curatedOverrideService,
                                  MerchantScoringClient scoringClient,
                                  ImpactScoreRepository impactScoreRepository,
-                                 TransactionScoredPublisher publisher) {
+                                 TransactionScoredPublisher publisher,
+                                 MeterRegistry meterRegistry) {
         this.merchantScoreRepository = merchantScoreRepository;
         this.curatedOverrideService = curatedOverrideService;
         this.scoringClient = scoringClient;
         this.impactScoreRepository = impactScoreRepository;
         this.publisher = publisher;
+        this.meterRegistry = meterRegistry;
     }
 
     public void categorize(TransactionIngested event) {
@@ -63,8 +67,12 @@ public class CategorizationService {
     /** Cache-first resolution: reuse a cached score, else LLM + curated override, then cache it. */
     private MerchantScoring resolveMerchantScoring(String normalized, String rawMerchant) {
         return merchantScoreRepository.findByNormalizedMerchant(normalized)
-                .map(this::fromEntity)
+                .map(entity -> {
+                    meterRegistry.counter("categorization.cache", "result", "hit").increment();
+                    return fromEntity(entity);
+                })
                 .orElseGet(() -> {
+                    meterRegistry.counter("categorization.cache", "result", "miss").increment();
                     MerchantScoring base = scoringClient.score(normalized, rawMerchant);
                     MerchantScoring resolved = curatedOverrideService.apply(normalized, base);
                     cache(normalized, resolved);

@@ -8,6 +8,8 @@ import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.TextBlock;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -46,11 +48,13 @@ public class MerchantScoringClient {
 
     private final AnthropicProperties props;
     private final ObjectMapper mapper;
+    private final MeterRegistry meterRegistry;
     private final AnthropicClient client;   // null when no API key is configured
 
-    public MerchantScoringClient(AnthropicProperties props, ObjectMapper mapper) {
+    public MerchantScoringClient(AnthropicProperties props, ObjectMapper mapper, MeterRegistry meterRegistry) {
         this.props = props;
         this.mapper = mapper;
+        this.meterRegistry = meterRegistry;
         if (StringUtils.hasText(props.apiKey())) {
             this.client = AnthropicOkHttpClient.builder().apiKey(props.apiKey()).build();
             log.info("Anthropic client configured (model={})", props.modelOrDefault());
@@ -62,8 +66,10 @@ public class MerchantScoringClient {
 
     public MerchantScoring score(String normalized, String rawMerchant) {
         if (client == null) {
+            meterRegistry.counter("categorization.scoring.total", "source", "fallback").increment();
             return fallback(rawMerchant);
         }
+        Timer.Sample sample = Timer.start(meterRegistry);
         try {
             MessageCreateParams params = MessageCreateParams.builder()
                     .model(props.modelOrDefault())
@@ -73,10 +79,16 @@ public class MerchantScoringClient {
                     .build();
 
             Message message = client.messages().create(params);
-            return parse(extractText(message), rawMerchant);
+            MerchantScoring result = parse(extractText(message), rawMerchant);
+            meterRegistry.counter("categorization.scoring.total", "source", "llm").increment();
+            return result;
         } catch (Exception e) {
+            meterRegistry.counter("categorization.scoring.total", "source", "fallback").increment();
             log.warn("Claude scoring failed for '{}' ({}); using fallback", rawMerchant, e.toString());
             return fallback(rawMerchant);
+        } finally {
+            // Latency of the Claude round-trip (visible in Grafana as categorization_claude_latency_*).
+            sample.stop(meterRegistry.timer("categorization.claude.latency"));
         }
     }
 

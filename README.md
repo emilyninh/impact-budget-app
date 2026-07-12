@@ -111,11 +111,36 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
+## Observability
+
+Actuator exposes health and Prometheus metrics at `/actuator/health` and
+`/actuator/prometheus`. Prometheus scrapes the app; Grafana (auto-provisioned datasource +
+the **Impact Budget** dashboard) visualizes it at http://localhost:3000. Custom metrics:
+
+| Metric | What it shows |
+| --- | --- |
+| `categorization_cache_total{result}` | merchant-score cache hit vs. miss (→ hit rate) |
+| `categorization_scoring_total{source}` | scoring by `llm` vs. `fallback` |
+| `categorization_claude_latency_seconds` | Claude round-trip latency (p95 on the dashboard) |
+| `kafka_consumer_fetch_manager_records_lag` | consumer lag per client |
+| `http_server_requests_seconds`, `jvm_memory_used_bytes` | standard HTTP/JVM |
+
 ## Testing
 
 ```bash
-mvn verify        # unit + Testcontainers integration tests (needs Docker)
+mvn verify        # unit tests + Testcontainers integration test (needs Docker for the IT)
 ```
+
+The suite has three layers:
+
+- **Unit** (Mockito) — sync idempotency, merchant normalization, curated overrides, the
+  cache-hit path (proving no second LLM call), aggregate math, goal progress.
+- **Architecture** — a Spring Modulith test statically verifies module boundaries (no
+  cycles, no reaching into another module's internals).
+- **Integration** (Testcontainers) — an end-to-end test publishes a `TransactionIngested`
+  event and asserts it flows through the categorization and budget consumers against real
+  Postgres/Kafka/Redis. Container-based tests skip cleanly when Docker isn't present, so
+  `mvn verify` is green locally without Docker and fully exercised in CI.
 
 ## Build progress
 
@@ -135,7 +160,9 @@ mvn verify        # unit + Testcontainers integration tests (needs Docker)
 - [x] **Step 6 — Dashboard & UI:** read API (`/api/dashboard/*`, `/api/goals`) over the
       Redis-cached aggregate; React + TypeScript + Recharts frontend (impact summary,
       local-vs-sustainability trend, goal tracker with progress bars, transaction list).
-- [ ] **Step 7 — Observability & tests:** Grafana dashboards, integration tests, README GIF.
+- [x] **Step 7 — Observability & tests:** custom Micrometer metrics (cache hit rate, Claude
+      latency, scoring source), provisioned Grafana dashboard, Spring Modulith boundary test,
+      end-to-end Testcontainers integration test.
 
 ## The impact‑scoring design
 
