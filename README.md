@@ -114,7 +114,8 @@ mvn verify        # unit + Testcontainers integration tests (needs Docker)
 - [x] **Step 1 — Skeleton & infra:** Spring Boot app, Postgres + Flyway, Docker Compose
       (Postgres/Redpanda/Redis/Prometheus/Grafana), Actuator health, Testcontainers
       smoke test, CI.
-- [ ] **Step 2 — Plaid ingestion:** link/exchange, cursor sync, webhook, idempotent upsert.
+- [x] **Step 2 — Plaid ingestion:** link/exchange endpoints, cursor-based `/transactions/sync`,
+      webhook listener, idempotent upsert on `plaid_transaction_id`, Resilience4j retry/backoff.
 - [ ] **Step 3 — Kafka events:** `TransactionIngested` producer + consumer.
 - [ ] **Step 4 — Categorization:** merchant cache, curated overrides, Claude scoring.
 - [ ] **Step 5 — Budget & goals:** Redis aggregates, goal tracking.

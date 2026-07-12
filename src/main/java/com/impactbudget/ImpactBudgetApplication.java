@@ -2,6 +2,7 @@ package com.impactbudget;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 /**
  * Impact Budget — a personal finance tracker that categorizes spending by <em>impact</em>
@@ -12,6 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * {@code common}) that communicate over Kafka. See {@code README.md} for the architecture.
  */
 @SpringBootApplication
+@ConfigurationPropertiesScan
 public class ImpactBudgetApplication {
 
     public static void main(String[] args) {

@@ -62,6 +62,19 @@ app:
       transactions-ingested: transactions.ingested
       transactions-scored: transactions.scored
 
+# --- Resilience (retry/backoff for third-party calls) -------------------------
+resilience4j:
+  retry:
+    instances:
+      plaid:
+        max-attempts: 4
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - java.io.IOException
+          - com.impactbudget.ingestion.PlaidException
+
 # --- Observability ------------------------------------------------------------
 management:
   endpoints:

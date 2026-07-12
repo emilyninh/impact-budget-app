@@ -15,7 +15,7 @@ CREATE TABLE plaid_item (
 
 CREATE INDEX idx_plaid_item_user ON plaid_item (user_id);
 
-CREATE TABLE transaction (
+CREATE TABLE bank_transaction (
     id                     UUID PRIMARY KEY,
     plaid_transaction_id   VARCHAR(128) NOT NULL,
     plaid_item_id          UUID         NOT NULL REFERENCES plaid_item (id),
@@ -34,5 +34,5 @@ CREATE TABLE transaction (
     CONSTRAINT uq_transaction_plaid_id UNIQUE (plaid_transaction_id)
 );
 
-CREATE INDEX idx_transaction_user_date ON transaction (user_id, txn_date);
-CREATE INDEX idx_transaction_item ON transaction (plaid_item_id);
+CREATE INDEX idx_transaction_user_date ON bank_transaction (user_id, txn_date);
+CREATE INDEX idx_transaction_item ON bank_transaction (plaid_item_id);
