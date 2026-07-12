@@ -2,8 +2,11 @@ package com.impactbudget.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.boot.autoconfigure.kafka.KafkaConnectionDetails;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.boot.ssl.SslBundles;
 import org.springframework.context.annotation.Bean;
@@ -30,11 +33,13 @@ class KafkaConfig {
     // --- Producer -------------------------------------------------------------
 
     @Bean
-    ProducerFactory<String, Object> producerFactory(KafkaProperties props, ObjectMapper mapper, SslBundles sslBundles) {
-        return new DefaultKafkaProducerFactory<>(
-                props.buildProducerProperties(sslBundles),
-                new StringSerializer(),
-                new JsonSerializer<>(mapper));
+    ProducerFactory<String, Object> producerFactory(KafkaProperties props, ObjectMapper mapper,
+                                                    SslBundles sslBundles, KafkaConnectionDetails connectionDetails) {
+        var config = props.buildProducerProperties(sslBundles);
+        // Honor the resolved broker address (e.g. Testcontainers' @ServiceConnection) rather
+        // than the static spring.kafka.bootstrap-servers.
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, connectionDetails.getBootstrapServers());
+        return new DefaultKafkaProducerFactory<>(config, new StringSerializer(), new JsonSerializer<>(mapper));
     }
 
     @Bean
@@ -45,14 +50,14 @@ class KafkaConfig {
     // --- Consumer -------------------------------------------------------------
 
     @Bean
-    ConsumerFactory<String, Object> consumerFactory(KafkaProperties props, ObjectMapper mapper, SslBundles sslBundles) {
+    ConsumerFactory<String, Object> consumerFactory(KafkaProperties props, ObjectMapper mapper,
+                                                    SslBundles sslBundles, KafkaConnectionDetails connectionDetails) {
         JsonDeserializer<Object> valueDeserializer = new JsonDeserializer<>(mapper);
         // Internal, fully-trusted event bus — every message originates from this app.
         valueDeserializer.trustedPackages("*");
-        return new DefaultKafkaConsumerFactory<>(
-                props.buildConsumerProperties(sslBundles),
-                new StringDeserializer(),
-                valueDeserializer);
+        var config = props.buildConsumerProperties(sslBundles);
+        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, connectionDetails.getBootstrapServers());
+        return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), valueDeserializer);
     }
 
     @Bean

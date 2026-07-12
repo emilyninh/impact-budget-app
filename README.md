@@ -133,6 +133,15 @@ the **Impact Budget** dashboard) visualizes it at http://localhost:3000. Custom 
 mvn verify        # unit tests + Testcontainers integration test (needs Docker for the IT)
 ```
 
+The container tests need a Docker daemon. With **Colima** (`brew install colima docker docker-compose`
+then `colima start`), point Testcontainers at its socket by creating `~/.testcontainers.properties`:
+
+```
+docker.host=unix:///<your-home>/.colima/docker.sock
+```
+
+(Docker Desktop and Linux CI need no extra config — the socket is at `/var/run/docker.sock`.)
+
 The suite has three layers:
 
 - **Unit** (Mockito) — sync idempotency, merchant normalization, curated overrides, the
