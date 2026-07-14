@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface CuratedMerchantRepository extends JpaRepository<CuratedMerchant, UUID> {
 
     List<CuratedMerchant> findAll();
+
+    boolean existsByMatchKey(String matchKey);
 }

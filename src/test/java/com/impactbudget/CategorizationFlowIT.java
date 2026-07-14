@@ -32,9 +32,10 @@ import static org.awaitility.Awaitility.await;
  * containers; skipped when Docker isn't available.
  */
 @SpringBootTest(properties = {
-        // Deterministic & offline: neutral scorer, no Open Food Facts network call.
+        // Deterministic & offline: neutral scorer, no external enrichment calls.
         "categorization.scoring.provider=none",
-        "openfoodfacts.enabled=false"
+        "openfoodfacts.enabled=false",
+        "wikidata.enabled=false"
 })
 @Import(TestcontainersConfiguration.class)
 @Testcontainers(disabledWithoutDocker = true)

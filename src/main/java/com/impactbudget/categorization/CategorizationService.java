@@ -31,6 +31,7 @@ public class CategorizationService {
     private final CuratedOverrideService curatedOverrideService;
     private final MerchantScoringClient scoringClient;
     private final OpenFoodFactsEnricher openFoodFactsEnricher;
+    private final WikidataLocalEnricher wikidataLocalEnricher;
     private final ImpactScoreRepository impactScoreRepository;
     private final TransactionScoredPublisher publisher;
     private final MeterRegistry meterRegistry;
@@ -39,6 +40,7 @@ public class CategorizationService {
                                  CuratedOverrideService curatedOverrideService,
                                  MerchantScoringClient scoringClient,
                                  OpenFoodFactsEnricher openFoodFactsEnricher,
+                                 WikidataLocalEnricher wikidataLocalEnricher,
                                  ImpactScoreRepository impactScoreRepository,
                                  TransactionScoredPublisher publisher,
                                  MeterRegistry meterRegistry) {
@@ -46,6 +48,7 @@ public class CategorizationService {
         this.curatedOverrideService = curatedOverrideService;
         this.scoringClient = scoringClient;
         this.openFoodFactsEnricher = openFoodFactsEnricher;
+        this.wikidataLocalEnricher = wikidataLocalEnricher;
         this.impactScoreRepository = impactScoreRepository;
         this.publisher = publisher;
         this.meterRegistry = meterRegistry;
@@ -76,11 +79,13 @@ public class CategorizationService {
                 })
                 .orElseGet(() -> {
                     meterRegistry.counter("categorization.cache", "result", "miss").increment();
-                    // base scorer → Open Food Facts sustainability overlay → curated override (wins).
+                    // base scorer → Open Food Facts (sustainability) → Wikidata (local) →
+                    // curated override (final authority, wins on conflict).
                     MerchantScoring base = scoringClient.score(normalized, rawMerchant);
-                    MerchantScoring enriched = openFoodFactsEnricher.enrich(
-                            base.cleanedMerchant() != null ? base.cleanedMerchant() : rawMerchant, base);
-                    MerchantScoring resolved = curatedOverrideService.apply(normalized, enriched);
+                    String display = base.cleanedMerchant() != null ? base.cleanedMerchant() : rawMerchant;
+                    MerchantScoring withEco = openFoodFactsEnricher.enrich(display, base);
+                    MerchantScoring withLocal = wikidataLocalEnricher.enrich(normalized, withEco);
+                    MerchantScoring resolved = curatedOverrideService.apply(normalized, withLocal);
                     cache(normalized, resolved);
                     return resolved;
                 });

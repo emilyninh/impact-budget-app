@@ -67,6 +67,11 @@ openfoodfacts:
   base-url: ${OPENFOODFACTS_BASE_URL:https://world.openfoodfacts.org}
   min-confidence: 0.6
 
+# Wikidata local-score enrichment (chain / parent-company detection) — free, no API key.
+wikidata:
+  enabled: ${WIKIDATA_ENABLED:true}
+  base-url: ${WIKIDATA_BASE_URL:https://www.wikidata.org}
+
 # App-specific topic names, referenced from producers/consumers
 app:
   kafka:

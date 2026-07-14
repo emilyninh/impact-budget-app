@@ -1,0 +1,28 @@
+# Representative set of Certified B Corporations, loaded into curated_merchant on startup.
+# Pipe-delimited so names/notes can contain commas. material_flags is comma-separated.
+# Replace this file with the full B Lab directory export (same columns) to widen coverage.
+# Sustainability scores reflect B Corp certification; local scoring is left to Wikidata/LLM
+# (a B Corp can still be owned by a multinational — e.g. Ben & Jerry's / Unilever).
+#
+# match_key|display_name|sustainability_score|material_flags|note
+ATHLETA|Athleta|82||B Corp — athletic apparel
+BOMBAS|Bombas|80||B Corp — apparel, one-for-one giving
+WARBY|Warby Parker|78||B Corp — eyewear
+COTOPAXI|Cotopaxi|88|recycled|B Corp — outdoor gear
+SEVENTH GENERATION|Seventh Generation|85|plant-based|B Corp — household (Unilever-owned)
+GROVE|Grove Collaborative|82|plant-based|B Corp — household goods
+METHOD|Method|80|plant-based|B Corp — cleaning products
+ECOVER|Ecover|80|plant-based|B Corp — cleaning products
+KING ARTHUR|King Arthur Baking|84|organic|B Corp — employee-owned
+NUMI|Numi Organic Tea|88|organic,fair-trade|B Corp — tea
+KLEAN KANTEEN|Klean Kanteen|85||B Corp — reusable bottles
+TONYS|Tony's Chocolonely|82|fair-trade|B Corp — chocolate
+VITAL FARMS|Vital Farms|80||B Corp — pasture-raised eggs
+THRIVE MARKET|Thrive Market|82|organic|B Corp — online grocery
+CABOT|Cabot Creamery|78||B Corp — dairy co-op
+NEW BELGIUM|New Belgium|80||B Corp — brewery
+ALTER ECO|Alter Eco|88|organic,fair-trade|B Corp — food
+GUAYAKI|Guayaki|85|organic,fair-trade|B Corp — yerba mate
+BEN JERRY|Ben & Jerry's|78|fair-trade|B Corp — ice cream (Unilever-owned)
+TOMS|TOMS|72||B Corp — footwear
+BEAUTYCOUNTER|Beautycounter|80||B Corp — cosmetics

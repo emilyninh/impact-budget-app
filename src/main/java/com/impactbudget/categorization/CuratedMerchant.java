@@ -41,6 +41,10 @@ public class CuratedMerchant {
     @Column(name = "note")
     private String note;
 
+    /** Provenance: MANUAL | B-CORP | … */
+    @Column(name = "source", nullable = false)
+    private String source = "MANUAL";
+
     public UUID getId() {
         return id;
     }
@@ -103,5 +107,13 @@ public class CuratedMerchant {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
     }
 }

@@ -70,7 +70,8 @@ The headline event‑driven pattern is **one event, two consumers**:
 - **Messaging:** Kafka (run locally as Redpanda)
 - **Cache:** Redis
 - **Impact scoring:** pluggable — **Ollama** (local, free, default) or **Anthropic Claude**,
-  plus free **Open Food Facts** eco-score enrichment; curated table is final authority
+  plus free **Open Food Facts** (eco-score) + **Wikidata** (chain/parent-company) enrichment
+  and a **B-Corp**-seeded curated table (final authority)
 - **Banking data:** Plaid (Sandbox)
 - **Observability:** Actuator + Micrometer + Prometheus + Grafana
 - **Frontend:** React + TypeScript (Vite) + Recharts
@@ -134,7 +135,8 @@ the **Impact Budget** dashboard) visualizes it at http://localhost:3000. Custom 
 | `categorization_cache_total{result}` | merchant-score cache hit vs. miss (→ hit rate) |
 | `categorization_scoring_total{source,provider}` | scoring by `llm` vs. `fallback`, by provider |
 | `categorization_scoring_latency_seconds{provider}` | LLM round-trip latency (p95 on the dashboard) |
-| `categorization_openfoodfacts_total{result}` | Open Food Facts enrichment hit vs. miss |
+| `categorization_openfoodfacts_total{result}` | Open Food Facts (sustainability) hit vs. miss |
+| `categorization_wikidata_total{result}` | Wikidata (local/chain) hit vs. miss |
 | `kafka_consumer_fetch_manager_records_lag` | consumer lag per client |
 | `http_server_requests_seconds`, `jvm_memory_used_bytes` | standard HTTP/JVM |
 
@@ -204,18 +206,26 @@ three‑stage pipeline that keeps accuracy high and LLM cost low:
    flags, confidence, rationale), parsed/validated with Jackson. If the provider is
    unavailable (Ollama not running, no API key) or a call fails, it falls back to a neutral
    heuristic so the pipeline never blocks.
-3. **Enrich with Open Food Facts.** A free, key‑less lookup against
+3. **Enrich sustainability with Open Food Facts.** A free, key‑less lookup against
    [Open Food Facts](https://world.openfoodfacts.org) overlays a real **eco‑score** on the
-   sustainability dimension (and adds material flags like `organic`, `fair-trade`) when a
-   merchant/brand matches food or packaged goods. Best for groceries/CPG; a no‑op for e.g.
-   restaurants.
-4. **Apply curated overrides.** A seeded `curated_merchant` table (known national chains,
-   the B‑Corp registry, known fast‑fashion/sustainable brands) is ground truth and
-   _corrects_ everything above. The curated table wins on conflict.
+   sustainability dimension (and adds flags like `organic`, `fair-trade`) when a merchant/brand
+   matches food or packaged goods. Best for groceries/CPG; a no‑op for e.g. restaurants.
+4. **Enrich local with Wikidata.** A free, key‑less [Wikidata](https://www.wikidata.org) lookup
+   demotes the **local** score for known chains — evidenced by a parent‑organization claim
+   (`P749`) or a description that reads like a chain/multinational/retailer. This is what
+   OpenStreetMap's `brand:wikidata` tags point at. Conservative: it only demotes confident
+   chain matches (a merchant with no Wikidata entry — typical of a genuine local business — is
+   left alone). Nicely composable with step 3: e.g. **Ben & Jerry's** ends up *high
+   sustainability* (B‑Corp) but *low local* (owned by Unilever).
+5. **Apply curated overrides.** The `curated_merchant` table is ground truth and _corrects_
+   everything above (wins on conflict). It's seeded two ways: hand‑picked national chains and
+   fast‑fashion/sustainable brands (Flyway `V2`), plus an idempotent startup loader that
+   ingests a **B‑Corp** dataset from `resources/data/bcorp-seed.csv` (swap in the full B Lab
+   export to widen coverage).
 
-The result is a mostly‑free pipeline: the curated table and Open Food Facts do most of the
-work with no cost or key, and the local Ollama model fills the long tail — so it runs at
-**$0** with no external API dependency.
+The result is a mostly‑free pipeline: the curated table + B‑Corp seed + Open Food Facts +
+Wikidata do most of the work with no cost or key, and a local Ollama model fills the long
+tail — so it runs at **$0** with no external paid‑API dependency.
 
 Each impact score records its `source` (`LLM`, `CURATED`, `FALLBACK`, or `CACHE`), so a
 repeat merchant served from the cache is visibly distinct from a fresh LLM call — this is
