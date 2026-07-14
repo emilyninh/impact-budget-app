@@ -7,7 +7,8 @@ RUN mvn -q -B dependency:go-offline
 COPY src ./src
 RUN mvn -q -B clean package -DskipTests
 
-FROM eclipse-temurin:17-jre-alpine
+# Multi-arch (amd64 + arm64/Apple Silicon). Temurin's -jre-alpine has no arm64 manifest.
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /build/target/impact-budget-*.jar app.jar
 EXPOSE 8080
