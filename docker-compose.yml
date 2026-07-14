@@ -83,6 +83,9 @@ services:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
       OPENFOODFACTS_ENABLED: ${OPENFOODFACTS_ENABLED:-true}
+      # Dev-only sample data so the dashboard shows something before Plaid is connected.
+      # Set DEMO_SEED_ENABLED=false (and `docker compose down -v`) when switching to real data.
+      DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-true}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-4-8}
       PLAID_CLIENT_ID: ${PLAID_CLIENT_ID:-}

@@ -111,6 +111,11 @@ management:
       export:
         enabled: true
 
+# Dev-only demo data (sample transactions + goals through the real pipeline).
+# Off by default and in tests; enabled in docker-compose for local runs.
+demo:
+  seed-enabled: ${DEMO_SEED_ENABLED:false}
+
 logging:
   level:
     com.impactbudget: ${APP_LOG_LEVEL:INFO}

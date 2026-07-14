@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,7 @@ import java.util.UUID;
  * is left to Wikidata/LLM (a B Corp can be owned by a multinational).
  */
 @Component
+@Order(10)   // run before the demo data seeder so curated/B-Corp scores are in place
 class CuratedMerchantSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(CuratedMerchantSeeder.class);
