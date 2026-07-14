@@ -84,16 +84,21 @@ npm run dev                  # serves http://localhost:5173 (proxies /api -> :80
 | Grafana          | http://localhost:3000 (admin/admin)   |
 | Redpanda console | http://localhost:8085                 |
 
-## 6. Getting data in (the dashboard is empty until then)
+## 6. Data
 
-Transactions enter only via Plaid. There is no built-in demo seed. Options:
-- **Plaid Sandbox:** put `PLAID_CLIENT_ID` / `PLAID_SECRET` (free sandbox keys from
-  dashboard.plaid.com) in `.env`, `docker compose up -d` to reload, then drive the Link flow:
-  `POST /api/plaid/link-token` → link in Plaid Link → `POST /api/plaid/exchange` → the app
-  syncs transactions, which flow through Kafka → scoring → budget → dashboard.
-- If asked to demo without Plaid, the honest path is to add a small dev-only seeder that
-  inserts a few `bank_transaction` rows and publishes `TransactionIngested` events — offer
-  this rather than hand-inserting rows (impact_score has an FK to bank_transaction).
+**Demo data is seeded by default for local runs** (`DEMO_SEED_ENABLED=true` in
+`docker-compose.yml`): on first boot the app publishes 25 sample transactions + 2 goals for
+`demo-user` through the real pipeline, so the dashboard is populated immediately. It's
+idempotent (won't duplicate on restart) and off in tests. Known brands score via
+curated/B-Corp/Wikidata; genuinely-local unknowns stay neutral unless Ollama is running
+(step 4) to identify them as independent.
+
+**To use real Plaid data instead:**
+1. Put `PLAID_CLIENT_ID` / `PLAID_SECRET` (free sandbox keys from dashboard.plaid.com) in `.env`.
+2. `DEMO_SEED_ENABLED=false` in `.env`, and `docker compose down -v && docker compose up -d`
+   for a clean slate (real transactions also land under `demo-user`).
+3. Drive the Link flow: `POST /api/plaid/link-token` → link in Plaid Link →
+   `POST /api/plaid/exchange` → the app syncs transactions through the same pipeline.
 
 ## Stop / clean up
 
