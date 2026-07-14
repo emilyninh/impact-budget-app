@@ -33,6 +33,8 @@ class CategorizationServiceTest {
     @Mock
     MerchantScoringClient scoringClient;
     @Mock
+    OpenFoodFactsEnricher openFoodFactsEnricher;
+    @Mock
     ImpactScoreRepository impactScoreRepository;
     @Mock
     TransactionScoredPublisher publisher;
@@ -42,7 +44,7 @@ class CategorizationServiceTest {
     @BeforeEach
     void setUp() {
         service = new CategorizationService(merchantScoreRepository, curatedOverrideService,
-                scoringClient, impactScoreRepository, publisher, new SimpleMeterRegistry());
+                scoringClient, openFoodFactsEnricher, impactScoreRepository, publisher, new SimpleMeterRegistry());
     }
 
     private TransactionIngested event() {
@@ -57,6 +59,8 @@ class CategorizationServiceTest {
         MerchantScoring base = new MerchantScoring("Local Coffee", "Coffee", 85, true, 60,
                 List.of(), 0.7, "independent", MerchantScoring.SOURCE_LLM);
         when(scoringClient.score(anyString(), anyString())).thenReturn(base);
+        // Enricher passes the scoring through unchanged for this test.
+        when(openFoodFactsEnricher.enrich(anyString(), any())).thenAnswer(inv -> inv.getArgument(1));
         when(curatedOverrideService.apply(anyString(), any())).thenReturn(base);
         when(impactScoreRepository.findByTransactionId(any())).thenReturn(Optional.empty());
 

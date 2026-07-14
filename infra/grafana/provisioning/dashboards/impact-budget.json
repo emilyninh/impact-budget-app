@@ -34,14 +34,14 @@
     },
     {
       "id": 3,
-      "title": "Claude scoring latency (p95)",
+      "title": "LLM scoring latency (p95)",
       "type": "timeseries",
       "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
       "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(categorization_claude_latency_seconds_bucket[5m])) by (le))",
-          "legendFormat": "p95"
+          "expr": "histogram_quantile(0.95, sum(rate(categorization_scoring_latency_seconds_bucket[5m])) by (le, provider))",
+          "legendFormat": "{{provider}} p95"
         }
       ]
     },

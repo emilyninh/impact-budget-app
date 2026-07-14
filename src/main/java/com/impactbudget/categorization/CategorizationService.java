@@ -30,6 +30,7 @@ public class CategorizationService {
     private final MerchantScoreRepository merchantScoreRepository;
     private final CuratedOverrideService curatedOverrideService;
     private final MerchantScoringClient scoringClient;
+    private final OpenFoodFactsEnricher openFoodFactsEnricher;
     private final ImpactScoreRepository impactScoreRepository;
     private final TransactionScoredPublisher publisher;
     private final MeterRegistry meterRegistry;
@@ -37,12 +38,14 @@ public class CategorizationService {
     public CategorizationService(MerchantScoreRepository merchantScoreRepository,
                                  CuratedOverrideService curatedOverrideService,
                                  MerchantScoringClient scoringClient,
+                                 OpenFoodFactsEnricher openFoodFactsEnricher,
                                  ImpactScoreRepository impactScoreRepository,
                                  TransactionScoredPublisher publisher,
                                  MeterRegistry meterRegistry) {
         this.merchantScoreRepository = merchantScoreRepository;
         this.curatedOverrideService = curatedOverrideService;
         this.scoringClient = scoringClient;
+        this.openFoodFactsEnricher = openFoodFactsEnricher;
         this.impactScoreRepository = impactScoreRepository;
         this.publisher = publisher;
         this.meterRegistry = meterRegistry;
@@ -73,8 +76,11 @@ public class CategorizationService {
                 })
                 .orElseGet(() -> {
                     meterRegistry.counter("categorization.cache", "result", "miss").increment();
+                    // base scorer → Open Food Facts sustainability overlay → curated override (wins).
                     MerchantScoring base = scoringClient.score(normalized, rawMerchant);
-                    MerchantScoring resolved = curatedOverrideService.apply(normalized, base);
+                    MerchantScoring enriched = openFoodFactsEnricher.enrich(
+                            base.cleanedMerchant() != null ? base.cleanedMerchant() : rawMerchant, base);
+                    MerchantScoring resolved = curatedOverrideService.apply(normalized, enriched);
                     cache(normalized, resolved);
                     return resolved;
                 });

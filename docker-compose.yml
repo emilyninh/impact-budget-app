@@ -77,12 +77,21 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_BOOTSTRAP_SERVERS: redpanda:29092
+      # Scoring provider: ollama (local/free, default) | claude | none
+      SCORING_PROVIDER: ${SCORING_PROVIDER:-ollama}
+      # Reach an Ollama server running on the host machine from inside the container.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      OPENFOODFACTS_ENABLED: ${OPENFOODFACTS_ENABLED:-true}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-4-8}
       PLAID_CLIENT_ID: ${PLAID_CLIENT_ID:-}
       PLAID_SECRET: ${PLAID_SECRET:-}
       PLAID_ENV: ${PLAID_ENV:-sandbox}
       PLAID_WEBHOOK_URL: ${PLAID_WEBHOOK_URL:-}
+    extra_hosts:
+      # Lets OLLAMA_BASE_URL=host.docker.internal resolve on Linux (works natively on Mac/Win).
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:8080"
 

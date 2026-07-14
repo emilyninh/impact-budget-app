@@ -51,6 +51,22 @@ anthropic:
   api-key: ${ANTHROPIC_API_KEY:}
   model: ${ANTHROPIC_MODEL:claude-opus-4-8}
 
+# Which scorer fills the merchant cache on a miss. Default is Ollama (local, free, no key).
+categorization:
+  scoring:
+    provider: ${SCORING_PROVIDER:ollama}      # ollama | claude | none
+
+# Local Ollama server — free, private LLM fallback. Start with: ollama run llama3.1
+ollama:
+  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:llama3.1}
+
+# Open Food Facts eco-score enrichment — free, no API key.
+openfoodfacts:
+  enabled: ${OPENFOODFACTS_ENABLED:true}
+  base-url: ${OPENFOODFACTS_BASE_URL:https://world.openfoodfacts.org}
+  min-confidence: 0.6
+
 # App-specific topic names, referenced from producers/consumers
 app:
   kafka:

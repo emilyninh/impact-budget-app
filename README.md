@@ -69,7 +69,8 @@ The headline event‑driven pattern is **one event, two consumers**:
 - **Persistence:** PostgreSQL + Flyway migrations
 - **Messaging:** Kafka (run locally as Redpanda)
 - **Cache:** Redis
-- **AI categorization:** Anthropic Claude (`claude-opus-4-8`) via structured outputs
+- **Impact scoring:** pluggable — **Ollama** (local, free, default) or **Anthropic Claude**,
+  plus free **Open Food Facts** eco-score enrichment; curated table is final authority
 - **Banking data:** Plaid (Sandbox)
 - **Observability:** Actuator + Micrometer + Prometheus + Grafana
 - **Frontend:** React + TypeScript (Vite) + Recharts
@@ -82,9 +83,18 @@ Everything runs via Docker Compose — the app image builds with Maven inside th
 container, so you don't need Maven or Node installed to run the stack.
 
 ```bash
-cp .env.example .env         # add your ANTHROPIC_API_KEY and Plaid sandbox keys
+cp .env.example .env         # Plaid sandbox keys; scoring defaults to free local Ollama
 docker compose up --build
 ```
+
+For the free default scorer, install [Ollama](https://ollama.com) on the host and pull a model:
+
+```bash
+ollama pull llama3.1         # then `ollama serve` (the app reaches it at host.docker.internal:11434)
+```
+
+No key needed. To use Claude instead, set `SCORING_PROVIDER=claude` and `ANTHROPIC_API_KEY` in
+`.env`. With neither, scoring falls back to a neutral heuristic (the app still runs).
 
 | Service           | URL                              |
 | ----------------- | -------------------------------- |
@@ -122,8 +132,9 @@ the **Impact Budget** dashboard) visualizes it at http://localhost:3000. Custom 
 | Metric | What it shows |
 | --- | --- |
 | `categorization_cache_total{result}` | merchant-score cache hit vs. miss (→ hit rate) |
-| `categorization_scoring_total{source}` | scoring by `llm` vs. `fallback` |
-| `categorization_claude_latency_seconds` | Claude round-trip latency (p95 on the dashboard) |
+| `categorization_scoring_total{source,provider}` | scoring by `llm` vs. `fallback`, by provider |
+| `categorization_scoring_latency_seconds{provider}` | LLM round-trip latency (p95 on the dashboard) |
+| `categorization_openfoodfacts_total{result}` | Open Food Facts enrichment hit vs. miss |
 | `kafka_consumer_fetch_manager_records_lag` | consumer lag per client |
 | `http_server_requests_seconds`, `jvm_memory_used_bytes` | standard HTTP/JVM |
 
@@ -183,14 +194,28 @@ three‑stage pipeline that keeps accuracy high and LLM cost low:
 1. **Normalize & cache.** Strip processor prefixes (`TST*`, `SQ*`), store IDs, and
    trailing digits, then look up a `merchant_score` table. A hit means _no LLM call_ —
    most spending repeats the same merchants.
-2. **Score on miss.** Call Claude (`claude-opus-4-8`) with the target JSON schema
-   described in the system prompt; the response is parsed and validated with Jackson into
-   a typed result (**Local score**, **Sustainability score**, material flags, confidence,
-   rationale). If no API key is configured, or the call/parse fails, it falls back to a
-   neutral heuristic so the pipeline never blocks — the app runs keyless.
-3. **Apply curated overrides.** A seeded `curated_merchant` table (known national chains,
+2. **Score on miss** with a pluggable provider (`categorization.scoring.provider`):
+   - **`ollama`** (default) — a local [Ollama](https://ollama.com) model (e.g. `llama3.1`).
+     Free, private (nothing leaves the machine), no API key. Uses Ollama's JSON mode.
+   - **`claude`** — Anthropic `claude-opus-4-8`.
+   - **`none`** — neutral heuristic only.
+
+   Any provider returns the same typed JSON (Local score, Sustainability score, material
+   flags, confidence, rationale), parsed/validated with Jackson. If the provider is
+   unavailable (Ollama not running, no API key) or a call fails, it falls back to a neutral
+   heuristic so the pipeline never blocks.
+3. **Enrich with Open Food Facts.** A free, key‑less lookup against
+   [Open Food Facts](https://world.openfoodfacts.org) overlays a real **eco‑score** on the
+   sustainability dimension (and adds material flags like `organic`, `fair-trade`) when a
+   merchant/brand matches food or packaged goods. Best for groceries/CPG; a no‑op for e.g.
+   restaurants.
+4. **Apply curated overrides.** A seeded `curated_merchant` table (known national chains,
    the B‑Corp registry, known fast‑fashion/sustainable brands) is ground truth and
-   _corrects_ the LLM. The curated table wins on conflict.
+   _corrects_ everything above. The curated table wins on conflict.
+
+The result is a mostly‑free pipeline: the curated table and Open Food Facts do most of the
+work with no cost or key, and the local Ollama model fills the long tail — so it runs at
+**$0** with no external API dependency.
 
 Each impact score records its `source` (`LLM`, `CURATED`, `FALLBACK`, or `CACHE`), so a
 repeat merchant served from the cache is visibly distinct from a fresh LLM call — this is

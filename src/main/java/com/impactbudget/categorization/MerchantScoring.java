@@ -25,4 +25,5 @@ public record MerchantScoring(
     public static final String SOURCE_FALLBACK = "FALLBACK";
     public static final String SOURCE_CURATED = "CURATED";
     public static final String SOURCE_CACHE = "CACHE";
+    public static final String SOURCE_OPENFOODFACTS = "OFF";
 }

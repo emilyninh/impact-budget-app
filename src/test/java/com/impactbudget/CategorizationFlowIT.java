@@ -31,7 +31,11 @@ import static org.awaitility.Awaitility.await;
  * (which records a {@code scored_transaction}). Runs against real Postgres/Kafka/Redis
  * containers; skipped when Docker isn't available.
  */
-@SpringBootTest
+@SpringBootTest(properties = {
+        // Deterministic & offline: neutral scorer, no Open Food Facts network call.
+        "categorization.scoring.provider=none",
+        "openfoodfacts.enabled=false"
+})
 @Import(TestcontainersConfiguration.class)
 @Testcontainers(disabledWithoutDocker = true)
 class CategorizationFlowIT {
