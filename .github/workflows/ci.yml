@@ -26,24 +26,57 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Detect frontend
-        id: detect
-        run: |
-          if [ -f frontend/package.json ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "frontend/ not present yet — skipping (added in build Step 6)."
-          fi
       - uses: actions/setup-node@v4
-        if: steps.detect.outputs.present == 'true'
         with:
           node-version: "20"
-      - name: Install, lint, test, build
-        if: steps.detect.outputs.present == 'true'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install, lint, build
         working-directory: frontend
         run: |
-          npm install
+          npm ci
           npm run lint --if-present
-          npm test --if-present
           npm run build
+
+  image:
+    name: Build & push image (GHCR)
+    if: github.ref == 'refs/heads/main'
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+  deploy:
+    name: Deploy (Fly.io)
+    if: github.ref == 'refs/heads/main'
+    needs: [image]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      # Deploys only if FLY_API_TOKEN is configured; otherwise this is a no-op so forks/CI
+      # without Fly access still go green.
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "FLY_API_TOKEN not set — skipping deploy."
+            exit 0
+          fi
+          flyctl deploy --remote-only

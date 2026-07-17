@@ -1,0 +1,30 @@
+# Redpanda (Kafka API) as a private Fly app. Deploy with:
+#   fly launch --copy-config --config deploy/fly.redpanda.toml --no-deploy
+#   fly volumes create redpanda_data --app impact-budget-redpanda --size 1
+#   fly deploy --config deploy/fly.redpanda.toml
+# Reachable from the app over the private network at impact-budget-redpanda.internal:9092.
+app = "impact-budget-redpanda"
+primary_region = "sea"
+
+[build]
+  image = "redpandadata/redpanda:v24.2.7"
+
+[processes]
+  app = "redpanda start --overprovisioned --smp 1 --memory 512M --reserve-memory 0M --node-id 0 --kafka-addr PLAINTEXT://0.0.0.0:9092 --advertise-kafka-addr PLAINTEXT://impact-budget-redpanda.internal:9092"
+
+[[mounts]]
+  source = "redpanda_data"
+  destination = "/var/lib/redpanda/data"
+
+# Private TCP only (no public edge). Other Fly apps reach it via <app>.internal:9092.
+[[services]]
+  internal_port = 9092
+  protocol = "tcp"
+  auto_stop_machines = false
+  auto_start_machines = false
+  min_machines_running = 1
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512

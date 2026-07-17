@@ -1,0 +1,22 @@
+# Redis (rebuildable cache) as a private Fly app. Deploy with:
+#   fly launch --copy-config --config deploy/fly.redis.toml --no-deploy
+#   fly deploy --config deploy/fly.redis.toml
+# Reachable from the app at impact-budget-redis.internal:6379. No auth (private network only),
+# no persistence needed — the aggregates rebuild from Postgres if the cache is cold.
+app = "impact-budget-redis"
+primary_region = "sea"
+
+[build]
+  image = "redis:7-alpine"
+
+[[services]]
+  internal_port = 6379
+  protocol = "tcp"
+  auto_stop_machines = false
+  auto_start_machines = false
+  min_machines_running = 1
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
