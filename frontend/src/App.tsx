@@ -20,8 +20,19 @@ import { BudgetTracker } from "./components/BudgetTracker";
 import { TrendChart } from "./components/TrendChart";
 import { GoalTracker } from "./components/GoalTracker";
 import { TransactionList } from "./components/TransactionList";
+import { LoginPage } from "./components/LoginPage";
+import { useAuth } from "./AuthContext";
 
 export default function App() {
+  const { user } = useAuth();
+  if (!user) {
+    return <LoginPage />;
+  }
+  return <Dashboard />;
+}
+
+function Dashboard() {
+  const { user, logout } = useAuth();
   const [summary, setSummary] = useState<BudgetAggregate | null>(null);
   const [trend, setTrend] = useState<BudgetAggregate[]>([]);
   const [goals, setGoals] = useState<GoalProgress[]>([]);
@@ -66,8 +77,16 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Impact Budget</h1>
-        <p className="tagline">Spending by impact, not by category.</p>
+        <div>
+          <h1>Impact Budget</h1>
+          <p className="tagline">Spending by impact, not by category.</p>
+        </div>
+        <div className="app-header-user">
+          <span className="muted">{user?.displayName ?? user?.email}</span>
+          <button className="logout-btn" type="button" onClick={logout}>
+            Sign out
+          </button>
+        </div>
       </header>
 
       {error && <div className="error">Couldn’t reach the API: {error}</div>}

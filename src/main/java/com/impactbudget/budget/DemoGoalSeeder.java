@@ -1,5 +1,6 @@
 package com.impactbudget.budget;
 
+import com.impactbudget.common.DemoIds;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -22,7 +23,7 @@ import java.util.UUID;
 class DemoGoalSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoGoalSeeder.class);
-    private static final String DEMO_USER = "demo-user";
+    private static final String DEMO_USER = DemoIds.DEMO_USER_ID;
 
     private final GoalRepository goalRepository;
     private final SpendBudgetService spendBudgetService;

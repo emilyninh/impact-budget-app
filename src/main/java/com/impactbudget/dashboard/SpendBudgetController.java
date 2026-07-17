@@ -2,8 +2,10 @@ package com.impactbudget.dashboard;
 
 import com.impactbudget.budget.BudgetStatus;
 import com.impactbudget.budget.SpendBudgetService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -15,12 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 
-/** Read and set the user's overall monthly spending budget. */
+/** Read and set the authenticated user's overall monthly spending budget. */
 @RestController
-@RequestMapping("/api/budget")
+@RequestMapping("/api/v1/budget")
 class SpendBudgetController {
-
-    private static final String DEFAULT_USER = "demo-user";
 
     private final SpendBudgetService budgetService;
 
@@ -29,20 +29,15 @@ class SpendBudgetController {
     }
 
     @GetMapping
-    BudgetStatus status(@RequestParam(required = false) String userId,
+    BudgetStatus status(@AuthenticationPrincipal String userId,
                         @RequestParam(required = false) String month) {
-        return budgetService.status(user(userId), month(month));
+        return budgetService.status(userId, month(month));
     }
 
     @PutMapping
-    BudgetStatus setLimit(@RequestBody SetBudgetRequest request) {
-        String user = user(request.userId());
-        budgetService.setLimit(user, request.monthlyLimit());
-        return budgetService.status(user, month(request.month()));
-    }
-
-    private String user(String userId) {
-        return StringUtils.hasText(userId) ? userId : DEFAULT_USER;
+    BudgetStatus setLimit(@AuthenticationPrincipal String userId, @Valid @RequestBody SetBudgetRequest request) {
+        budgetService.setLimit(userId, request.monthlyLimit());
+        return budgetService.status(userId, month(request.month()));
     }
 
     private String month(String month) {
@@ -50,7 +45,6 @@ class SpendBudgetController {
     }
 
     record SetBudgetRequest(
-            String userId,
             String month,
             @NotNull @Positive BigDecimal monthlyLimit) {
     }

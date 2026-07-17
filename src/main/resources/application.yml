@@ -51,6 +51,13 @@ anthropic:
   api-key: ${ANTHROPIC_API_KEY:}
   model: ${ANTHROPIC_MODEL:claude-opus-4-8}
 
+# JWT auth. The dev default secret is only for local runs; production must set JWT_SECRET
+# (>= 32 chars for HS256).
+auth:
+  jwt:
+    secret: ${JWT_SECRET:local-dev-secret-do-not-use-in-prod-please-change-me-0123456789}
+    ttl: ${JWT_TTL:12h}
+
 # Which scorer fills the merchant cache on a miss. Default is Ollama (local, free, no key).
 categorization:
   scoring:

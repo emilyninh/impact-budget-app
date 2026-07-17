@@ -1,3 +1,14 @@
+export interface AuthUser {
+  userId: string;
+  email: string;
+  displayName: string | null;
+}
+
+export interface AuthResponse extends AuthUser {
+  token: string;
+  expiresInSeconds: number;
+}
+
 export interface BudgetAggregate {
   userId: string;
   yearMonth: string;

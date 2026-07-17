@@ -3,24 +3,22 @@ package com.impactbudget.dashboard;
 import com.impactbudget.budget.Goal;
 import com.impactbudget.budget.GoalProgress;
 import com.impactbudget.budget.GoalService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.util.StringUtils;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
 
-/** Create goals and read their live progress. */
+/** Create goals and read their live progress, scoped to the authenticated user. */
 @RestController
-@RequestMapping("/api/goals")
+@RequestMapping("/api/v1/goals")
 class GoalController {
-
-    private static final String DEFAULT_USER = "demo-user";
 
     private final GoalService goalService;
 
@@ -29,26 +27,21 @@ class GoalController {
     }
 
     @GetMapping
-    List<GoalProgress> progress(@RequestParam(required = false) String userId) {
-        return goalService.progress(user(userId));
+    List<GoalProgress> progress(@AuthenticationPrincipal String userId) {
+        return goalService.progress(userId);
     }
 
     @PostMapping
-    Goal create(@RequestBody CreateGoalRequest request) {
+    Goal create(@AuthenticationPrincipal String userId, @Valid @RequestBody CreateGoalRequest request) {
         return goalService.createGoal(
-                user(request.userId()),
+                userId,
                 request.dimension(),
                 request.baselinePct(),
                 request.targetPct(),
                 request.targetDate());
     }
 
-    private String user(String userId) {
-        return StringUtils.hasText(userId) ? userId : DEFAULT_USER;
-    }
-
     record CreateGoalRequest(
-            String userId,
             @NotNull Goal.Dimension dimension,
             int baselinePct,
             int targetPct,

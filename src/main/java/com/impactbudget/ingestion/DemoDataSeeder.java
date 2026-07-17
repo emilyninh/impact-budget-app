@@ -1,5 +1,6 @@
 package com.impactbudget.ingestion;
 
+import com.impactbudget.common.DemoIds;
 import com.impactbudget.common.TransactionIngested;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,7 @@ import java.util.UUID;
 class DemoDataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoDataSeeder.class);
-    private static final String DEMO_USER = "demo-user";
+    private static final String DEMO_USER = DemoIds.DEMO_USER_ID;
     private static final String DEMO_ITEM = "demo-item";
 
     private final PlaidItemRepository itemRepository;

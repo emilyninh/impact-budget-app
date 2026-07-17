@@ -1,22 +1,20 @@
 package com.impactbudget.ingestion;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.util.StringUtils;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoints the frontend calls to drive the Plaid Link flow. There is no auth in this
- * portfolio build, so a {@code userId} may be supplied (defaults to {@code demo-user}).
+ * Endpoints the frontend calls to drive the Plaid Link flow. The account is linked to the
+ * authenticated user (the JWT subject), so each user connects their own bank.
  */
 @RestController
-@RequestMapping("/api/plaid")
+@RequestMapping("/api/v1/plaid")
 class PlaidLinkController {
-
-    private static final String DEFAULT_USER = "demo-user";
 
     private final PlaidLinkService linkService;
 
@@ -26,28 +24,22 @@ class PlaidLinkController {
 
     /** Create a Link token for the browser Plaid Link widget. */
     @PostMapping("/link-token")
-    LinkTokenResponse createLinkToken(@RequestBody(required = false) UserRequest request) {
-        String userId = (request != null && StringUtils.hasText(request.userId()))
-                ? request.userId() : DEFAULT_USER;
+    LinkTokenResponse createLinkToken(@AuthenticationPrincipal String userId) {
         return new LinkTokenResponse(linkService.createLinkToken(userId));
     }
 
     /** Exchange the public token returned by Link for a persistent access token. */
     @PostMapping("/exchange")
-    ExchangeResponse exchange(@RequestBody ExchangeRequest request) {
-        String userId = StringUtils.hasText(request.userId()) ? request.userId() : DEFAULT_USER;
+    ExchangeResponse exchange(@AuthenticationPrincipal String userId,
+                              @Valid @RequestBody ExchangeRequest request) {
         String itemId = linkService.exchangePublicToken(request.publicToken(), userId);
         return new ExchangeResponse(itemId);
-    }
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    record UserRequest(String userId) {
     }
 
     record LinkTokenResponse(String linkToken) {
     }
 
-    record ExchangeRequest(@NotBlank String publicToken, String userId) {
+    record ExchangeRequest(@NotBlank String publicToken) {
     }
 
     record ExchangeResponse(String itemId) {

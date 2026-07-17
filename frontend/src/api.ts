@@ -1,58 +1,80 @@
 import type {
+  AuthResponse,
   BudgetAggregate,
   BudgetStatus,
   CreateGoalRequest,
   GoalProgress,
   ScoredTransactionView,
 } from "./types";
+import { getToken, handleUnauthorized } from "./session";
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(path);
-  if (!res.ok) {
-    throw new Error(`GET ${path} failed: ${res.status}`);
+const BASE = "/api/v1";
+
+/** Fetch with the bearer token attached; a 401 forces logout via the session handler. */
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getToken();
+  const headers = new Headers(init?.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (init?.body) headers.set("Content-Type", "application/json");
+
+  const res = await fetch(`${BASE}${path}`, { ...init, headers });
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new Error("Session expired — please sign in again.");
   }
-  return res.json() as Promise<T>;
+  if (!res.ok) {
+    throw new Error(`${init?.method ?? "GET"} ${path} failed: ${res.status}`);
+  }
+  return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
+// --- Auth (public) ---------------------------------------------------------
+export function login(email: string, password: string): Promise<AuthResponse> {
+  return request<AuthResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function register(
+  email: string,
+  password: string,
+  displayName: string,
+): Promise<AuthResponse> {
+  return request<AuthResponse>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ email, password, displayName }),
+  });
+}
+
+// --- Dashboard (authenticated) ---------------------------------------------
 export function fetchSummary(): Promise<BudgetAggregate> {
-  return get<BudgetAggregate>("/api/dashboard/summary");
+  return request<BudgetAggregate>("/dashboard/summary");
 }
 
 export function fetchTrend(months = 6): Promise<BudgetAggregate[]> {
-  return get<BudgetAggregate[]>(`/api/dashboard/trend?months=${months}`);
+  return request<BudgetAggregate[]>(`/dashboard/trend?months=${months}`);
 }
 
 export function fetchTransactions(): Promise<ScoredTransactionView[]> {
-  return get<ScoredTransactionView[]>("/api/dashboard/transactions");
+  return request<ScoredTransactionView[]>("/dashboard/transactions");
 }
 
 export function fetchGoals(): Promise<GoalProgress[]> {
-  return get<GoalProgress[]>("/api/goals");
+  return request<GoalProgress[]>("/goals");
 }
 
 export async function createGoal(body: CreateGoalRequest): Promise<void> {
-  const res = await fetch("/api/goals", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(`Create goal failed: ${res.status}`);
-  }
+  await request<unknown>("/goals", { method: "POST", body: JSON.stringify(body) });
 }
 
 export function fetchBudget(): Promise<BudgetStatus> {
-  return get<BudgetStatus>("/api/budget");
+  return request<BudgetStatus>("/budget");
 }
 
-export async function setBudget(monthlyLimit: number): Promise<BudgetStatus> {
-  const res = await fetch("/api/budget", {
+export function setBudget(monthlyLimit: number): Promise<BudgetStatus> {
+  return request<BudgetStatus>("/budget", {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ monthlyLimit }),
   });
-  if (!res.ok) {
-    throw new Error(`Set budget failed: ${res.status}`);
-  }
-  return res.json() as Promise<BudgetStatus>;
 }
