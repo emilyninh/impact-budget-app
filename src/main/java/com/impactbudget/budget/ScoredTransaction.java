@@ -32,6 +32,9 @@ public class ScoredTransaction {
     @Column(name = "merchant_name")
     private String merchantName;
 
+    @Column(name = "category")
+    private String category;
+
     @Column(name = "year_month", nullable = false)
     private String yearMonth;
 
@@ -84,6 +87,14 @@ public class ScoredTransaction {
 
     public void setMerchantName(String merchantName) {
         this.merchantName = merchantName;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     public String getYearMonth() {

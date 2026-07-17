@@ -23,6 +23,7 @@ export interface GoalProgress {
 
 export interface ScoredTransactionView {
   merchantName: string | null;
+  category: string | null;
   txnDate: string;
   amount: number;
   localScore: number;
@@ -35,4 +36,19 @@ export interface CreateGoalRequest {
   baselinePct: number;
   targetPct: number;
   targetDate: string;
+}
+
+export type BudgetStatusKind = "NO_BUDGET" | "OVER" | "AT_RISK" | "ON_TRACK";
+
+export interface BudgetStatus {
+  userId: string;
+  yearMonth: string;
+  monthlyLimit: number | null;
+  spent: number;
+  remaining: number | null;
+  pctUsed: number;
+  daysElapsed: number;
+  daysInMonth: number;
+  projectedSpend: number;
+  status: BudgetStatusKind;
 }

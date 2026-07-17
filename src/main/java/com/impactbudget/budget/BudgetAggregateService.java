@@ -57,6 +57,7 @@ public class BudgetAggregateService {
         st.setTransactionId(event.transactionId());
         st.setUserId(event.userId());
         st.setMerchantName(event.merchantName());
+        st.setCategory(event.category());
         st.setYearMonth(yearMonth);
         st.setTxnDate(event.txnDate());
         st.setAmount(event.amount());

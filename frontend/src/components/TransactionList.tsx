@@ -14,6 +14,7 @@ export function TransactionList({ transactions }: { transactions: ScoredTransact
             <thead>
               <tr>
                 <th>Merchant</th>
+                <th>Category</th>
                 <th>Date</th>
                 <th className="num">Amount</th>
                 <th className="num">Local</th>
@@ -26,6 +27,13 @@ export function TransactionList({ transactions }: { transactions: ScoredTransact
                   <td>
                     {t.merchantName ?? "Unknown"}
                     {t.localIndependent && <span className="pill">local</span>}
+                  </td>
+                  <td>
+                    {t.category ? (
+                      <span className="category">{t.category}</span>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
                   </td>
                   <td>{t.txnDate}</td>
                   <td className="num">{formatUsd(t.amount)}</td>

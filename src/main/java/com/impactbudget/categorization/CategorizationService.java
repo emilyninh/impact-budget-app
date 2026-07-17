@@ -32,6 +32,7 @@ public class CategorizationService {
     private final MerchantScoringClient scoringClient;
     private final OpenFoodFactsEnricher openFoodFactsEnricher;
     private final WikidataLocalEnricher wikidataLocalEnricher;
+    private final MerchantCategoryResolver categoryResolver;
     private final ImpactScoreRepository impactScoreRepository;
     private final TransactionScoredPublisher publisher;
     private final MeterRegistry meterRegistry;
@@ -41,6 +42,7 @@ public class CategorizationService {
                                  MerchantScoringClient scoringClient,
                                  OpenFoodFactsEnricher openFoodFactsEnricher,
                                  WikidataLocalEnricher wikidataLocalEnricher,
+                                 MerchantCategoryResolver categoryResolver,
                                  ImpactScoreRepository impactScoreRepository,
                                  TransactionScoredPublisher publisher,
                                  MeterRegistry meterRegistry) {
@@ -49,6 +51,7 @@ public class CategorizationService {
         this.scoringClient = scoringClient;
         this.openFoodFactsEnricher = openFoodFactsEnricher;
         this.wikidataLocalEnricher = wikidataLocalEnricher;
+        this.categoryResolver = categoryResolver;
         this.impactScoreRepository = impactScoreRepository;
         this.publisher = publisher;
         this.meterRegistry = meterRegistry;
@@ -85,10 +88,21 @@ public class CategorizationService {
                     String display = base.cleanedMerchant() != null ? base.cleanedMerchant() : rawMerchant;
                     MerchantScoring withEco = openFoodFactsEnricher.enrich(display, base);
                     MerchantScoring withLocal = wikidataLocalEnricher.enrich(normalized, withEco);
-                    MerchantScoring resolved = curatedOverrideService.apply(normalized, withLocal);
+                    MerchantScoring overridden = curatedOverrideService.apply(normalized, withLocal);
+                    // Normalize the (possibly free-text / null) category onto the fixed taxonomy,
+                    // so both the cache and the published event carry a clean category value.
+                    MerchantScoring resolved = withCategory(overridden, display);
                     cache(normalized, resolved);
                     return resolved;
                 });
+    }
+
+    /** Return a copy of the scoring with its category normalized onto the fixed taxonomy. */
+    private MerchantScoring withCategory(MerchantScoring s, String display) {
+        String category = categoryResolver.resolve(display, s.category());
+        return new MerchantScoring(s.cleanedMerchant(), category, s.localScore(),
+                s.localIndependent(), s.sustainabilityScore(), s.materialFlags(),
+                s.confidence(), s.rationale(), s.source());
     }
 
     private void cache(String normalized, MerchantScoring scoring) {

@@ -46,7 +46,8 @@ class CategorizationServiceTest {
     @BeforeEach
     void setUp() {
         service = new CategorizationService(merchantScoreRepository, curatedOverrideService,
-                scoringClient, openFoodFactsEnricher, wikidataLocalEnricher, impactScoreRepository,
+                scoringClient, openFoodFactsEnricher, wikidataLocalEnricher,
+                new MerchantCategoryResolver(), impactScoreRepository,
                 publisher, new SimpleMeterRegistry());
     }
 
@@ -78,6 +79,8 @@ class CategorizationServiceTest {
         verify(publisher).publishScored(scored.capture());
         assertThat(scored.getValue().localScore()).isEqualTo(85);
         assertThat(scored.getValue().amount()).isEqualByComparingTo("4.50");
+        // Free-text LLM category "Coffee" is normalized onto the fixed taxonomy.
+        assertThat(scored.getValue().category()).isEqualTo("Eating Out");
     }
 
     @Test

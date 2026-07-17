@@ -1,5 +1,6 @@
 import type {
   BudgetAggregate,
+  BudgetStatus,
   CreateGoalRequest,
   GoalProgress,
   ScoredTransactionView,
@@ -38,4 +39,20 @@ export async function createGoal(body: CreateGoalRequest): Promise<void> {
   if (!res.ok) {
     throw new Error(`Create goal failed: ${res.status}`);
   }
+}
+
+export function fetchBudget(): Promise<BudgetStatus> {
+  return get<BudgetStatus>("/api/budget");
+}
+
+export async function setBudget(monthlyLimit: number): Promise<BudgetStatus> {
+  const res = await fetch("/api/budget", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ monthlyLimit }),
+  });
+  if (!res.ok) {
+    throw new Error(`Set budget failed: ${res.status}`);
+  }
+  return res.json() as Promise<BudgetStatus>;
 }
