@@ -343,6 +343,65 @@ td.num {
   white-space: nowrap;
 }
 
+/* Live indicator */
+.live-dot {
+  color: #1f9d8b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Greener swaps */
+.swaps-intro {
+  margin: -6px 0 14px;
+  font-size: 13px;
+}
+
+.swap-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.swap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.swap-from,
+.swap-alt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.swap-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.swap-merchant {
+  font-weight: 600;
+}
+
+.swap-arrow {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.flag {
+  display: inline-block;
+  padding: 1px 7px;
+  font-size: 11px;
+  border-radius: 999px;
+  background: #e5f5f2;
+  color: #1f9d8b;
+}
+
 /* Budget tracker */
 .budget-status {
   align-self: center;

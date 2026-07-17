@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.impactbudget.common.TransactionScored;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -30,15 +31,21 @@ public class BudgetAggregateService {
     private static final Duration CACHE_TTL = Duration.ofHours(1);
 
     private final ScoredTransactionRepository repository;
+    private final CategoryMonthlyRollupRepository categoryRollupRepository;
     private final StringRedisTemplate redis;
     private final ObjectMapper mapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public BudgetAggregateService(ScoredTransactionRepository repository,
+                                  CategoryMonthlyRollupRepository categoryRollupRepository,
                                   StringRedisTemplate redis,
-                                  ObjectMapper mapper) {
+                                  ObjectMapper mapper,
+                                  ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
+        this.categoryRollupRepository = categoryRollupRepository;
         this.redis = redis;
         this.mapper = mapper;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Record a scored transaction into the budget projection and invalidate its month cache. */
@@ -70,7 +77,15 @@ public class BudgetAggregateService {
         } catch (DataIntegrityViolationException race) {
             return; // another consumer recorded it first
         }
+
+        // Maintain the per-category rollup incrementally (safe: only new rows reach here).
+        String category = event.category() != null ? event.category() : "Other";
+        categoryRollupRepository.accumulate(event.userId(), yearMonth, category, event.amount(),
+                event.amount().multiply(BigDecimal.valueOf(event.sustainabilityScore())));
+
         invalidate(event.userId(), yearMonth);
+        // Notify the dashboard (SSE) that this user's month changed — dashboard listens.
+        eventPublisher.publishEvent(new BudgetUpdatedEvent(event.userId(), yearMonth));
     }
 
     /** Read the aggregate for a user/month, serving from Redis or rebuilding from Postgres. */
@@ -109,6 +124,13 @@ public class BudgetAggregateService {
     public List<ScoredTransactionView> recentTransactions(String userId, String yearMonth) {
         return repository.findByUserIdAndYearMonthOrderByTxnDateDesc(userId, yearMonth).stream()
                 .map(ScoredTransactionView::from)
+                .toList();
+    }
+
+    /** Spend broken down by category for a month, biggest first (for the UI breakdown chart). */
+    public List<CategoryBreakdown> categoryBreakdown(String userId, String yearMonth) {
+        return categoryRollupRepository.findByUserIdAndYearMonthOrderByTotalSpendDesc(userId, yearMonth).stream()
+                .map(CategoryBreakdown::from)
                 .toList();
     }
 

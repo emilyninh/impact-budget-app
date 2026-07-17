@@ -49,6 +49,26 @@ export interface CreateGoalRequest {
   targetDate: string;
 }
 
+export interface CategoryBreakdown {
+  category: string;
+  totalSpend: number;
+  txnCount: number;
+  avgSustainability: number;
+}
+
+export interface GreenerAlternative {
+  merchant: string;
+  sustainabilityScore: number;
+  flags: string[];
+}
+
+export interface Swap {
+  fromMerchant: string;
+  category: string;
+  fromScore: number;
+  suggestions: GreenerAlternative[];
+}
+
 export type BudgetStatusKind = "NO_BUDGET" | "OVER" | "AT_RISK" | "ON_TRACK";
 
 export interface BudgetStatus {

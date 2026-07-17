@@ -2,9 +2,11 @@ import type {
   AuthResponse,
   BudgetAggregate,
   BudgetStatus,
+  CategoryBreakdown,
   CreateGoalRequest,
   GoalProgress,
   ScoredTransactionView,
+  Swap,
 } from "./types";
 import { getToken, handleUnauthorized } from "./session";
 
@@ -66,6 +68,14 @@ export function fetchGoals(): Promise<GoalProgress[]> {
 
 export async function createGoal(body: CreateGoalRequest): Promise<void> {
   await request<unknown>("/goals", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function fetchCategories(): Promise<CategoryBreakdown[]> {
+  return request<CategoryBreakdown[]>("/dashboard/categories");
+}
+
+export function fetchSwaps(): Promise<Swap[]> {
+  return request<Swap[]>("/insights/swaps");
 }
 
 export function fetchBudget(): Promise<BudgetStatus> {

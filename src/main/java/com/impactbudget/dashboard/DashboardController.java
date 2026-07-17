@@ -2,6 +2,7 @@ package com.impactbudget.dashboard;
 
 import com.impactbudget.budget.BudgetAggregate;
 import com.impactbudget.budget.BudgetAggregateService;
+import com.impactbudget.budget.CategoryBreakdown;
 import com.impactbudget.budget.ScoredTransactionView;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
@@ -44,6 +45,12 @@ class DashboardController {
     List<ScoredTransactionView> transactions(@AuthenticationPrincipal String userId,
                                              @RequestParam(required = false) String month) {
         return aggregateService.recentTransactions(userId, month(month));
+    }
+
+    @GetMapping("/categories")
+    List<CategoryBreakdown> categories(@AuthenticationPrincipal String userId,
+                                       @RequestParam(required = false) String month) {
+        return aggregateService.categoryBreakdown(userId, month(month));
     }
 
     private String month(String month) {

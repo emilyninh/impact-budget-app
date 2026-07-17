@@ -28,6 +28,8 @@ class BudgetAggregateServiceTest {
     @Mock
     ScoredTransactionRepository repository;
     @Mock
+    CategoryMonthlyRollupRepository categoryRollupRepository;
+    @Mock
     StringRedisTemplate redis;
     @Mock
     ValueOperations<String, String> valueOps;
@@ -36,7 +38,9 @@ class BudgetAggregateServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new BudgetAggregateService(repository, redis, new ObjectMapper());
+        // No-op ApplicationEventPublisher (functional interface).
+        service = new BudgetAggregateService(repository, categoryRollupRepository, redis,
+                new ObjectMapper(), event -> { });
     }
 
     private ScoredTransaction row(String amount, int local, int sustainability, boolean independent) {
