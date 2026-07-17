@@ -1,26 +1,28 @@
 package com.impactbudget.ingestion;
 
 import com.impactbudget.common.AppKafkaProperties;
+import com.impactbudget.common.OutboxWriter;
 import com.impactbudget.common.TransactionIngested;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Publishes {@link TransactionIngested} events. Keyed by {@code userId} so all of a
- * user's transactions land on the same partition and are processed in order.
+ * Enqueues {@link TransactionIngested} events to the transactional outbox (not Kafka
+ * directly), keyed by {@code userId} so a user's transactions stay ordered on one partition.
+ * Must be called inside the same transaction as the {@code bank_transaction} write so the row
+ * and its event commit atomically; the {@code OutboxRelay} then publishes to Kafka.
  */
 @Component
 public class TransactionEventPublisher {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxWriter outboxWriter;
     private final AppKafkaProperties props;
 
-    public TransactionEventPublisher(KafkaTemplate<String, Object> kafkaTemplate, AppKafkaProperties props) {
-        this.kafkaTemplate = kafkaTemplate;
+    public TransactionEventPublisher(OutboxWriter outboxWriter, AppKafkaProperties props) {
+        this.outboxWriter = outboxWriter;
         this.props = props;
     }
 
     public void publishIngested(TransactionIngested event) {
-        kafkaTemplate.send(props.topics().transactionsIngested(), event.userId(), event);
+        outboxWriter.enqueue(props.topics().transactionsIngested(), event.userId(), event);
     }
 }

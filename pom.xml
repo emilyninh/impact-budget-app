@@ -153,6 +153,16 @@
             <artifactId>micrometer-registry-prometheus</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- Distributed tracing: Micrometer Tracing -> OpenTelemetry -> OTLP (Grafana Tempo).
+             Versions are managed by Spring Boot's micrometer-tracing / opentelemetry BOMs. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+        </dependency>
 
         <!-- Test -->
         <dependency>

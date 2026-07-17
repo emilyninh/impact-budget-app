@@ -18,8 +18,11 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
+import org.springframework.util.backoff.FixedBackOff;
 
 /**
  * Kafka wiring. The producer/consumer factories are built explicitly so the JSON
@@ -39,12 +42,17 @@ class KafkaConfig {
         // Honor the resolved broker address (e.g. Testcontainers' @ServiceConnection) rather
         // than the static spring.kafka.bootstrap-servers.
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, connectionDetails.getBootstrapServers());
+        // Exactly-once-ish producer: no duplicates on retry, all in-sync replicas must ack.
+        config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        config.put(ProducerConfig.ACKS_CONFIG, "all");
         return new DefaultKafkaProducerFactory<>(config, new StringSerializer(), new JsonSerializer<>(mapper));
     }
 
     @Bean
     KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {
-        return new KafkaTemplate<>(producerFactory);
+        KafkaTemplate<String, Object> template = new KafkaTemplate<>(producerFactory);
+        template.setObservationEnabled(true);   // emit producer spans for distributed tracing
+        return template;
     }
 
     // --- Consumer -------------------------------------------------------------
@@ -62,11 +70,25 @@ class KafkaConfig {
 
     @Bean
     ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory(
-            ConsumerFactory<String, Object> consumerFactory) {
+            ConsumerFactory<String, Object> consumerFactory, DefaultErrorHandler errorHandler) {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
+        factory.setCommonErrorHandler(errorHandler);
+        factory.getContainerProperties().setObservationEnabled(true);   // consumer spans for tracing
         return factory;
+    }
+
+    /**
+     * Retries a failing record a few times with exponential backoff, then routes it to the
+     * topic's {@code .DLT} instead of dropping it (the default silently discards after retries).
+     */
+    @Bean
+    DefaultErrorHandler errorHandler(KafkaTemplate<String, Object> kafkaTemplate) {
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate);
+        // Retry 3 times, 500ms apart, then route the record to <topic>.DLT.
+        FixedBackOff backOff = new FixedBackOff(500L, 3L);
+        return new DefaultErrorHandler(recoverer, backOff);
     }
 
     // --- Topics (auto-created on startup via KafkaAdmin) ----------------------
@@ -79,5 +101,16 @@ class KafkaConfig {
     @Bean
     NewTopic transactionsScoredTopic(AppKafkaProperties props) {
         return TopicBuilder.name(props.topics().transactionsScored()).partitions(3).replicas(1).build();
+    }
+
+    // Dead-letter topics — the error handler routes exhausted records here (same partition count).
+    @Bean
+    NewTopic transactionsIngestedDlt(AppKafkaProperties props) {
+        return TopicBuilder.name(props.topics().transactionsIngested() + ".DLT").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    NewTopic transactionsScoredDlt(AppKafkaProperties props) {
+        return TopicBuilder.name(props.topics().transactionsScored() + ".DLT").partitions(3).replicas(1).build();
     }
 }

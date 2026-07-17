@@ -1,25 +1,20 @@
 package com.impactbudget.ingestion;
 
-import com.impactbudget.common.TransactionIngested;
-import com.plaid.client.model.Location;
-import com.plaid.client.model.PersonalFinanceCategory;
 import com.plaid.client.model.RemovedTransaction;
 import com.plaid.client.model.TransactionsSyncResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.util.UUID;
-
 /**
  * Pulls transactions from Plaid using the cursor-based {@code /transactions/sync} endpoint
  * and persists them idempotently.
  *
  * <p>Deliberately not wrapped in a single {@code @Transactional} spanning the whole loop:
- * that would hold a DB connection open across network calls. Instead each repository write
- * is its own transaction, and idempotency (unique {@code plaid_transaction_id}) makes a
- * re-run after a partial failure safe — the cursor only advances once a page is applied.
+ * that would hold a DB connection open across network calls. Instead each row is upserted in
+ * its own short transaction ({@link TransactionUpserter}, which also enqueues the outbox
+ * event atomically), and idempotency (unique {@code plaid_transaction_id}) makes a re-run
+ * after a partial failure safe — the cursor only advances once a page is applied.
  */
 @Service
 public class TransactionSyncService {
@@ -29,16 +24,16 @@ public class TransactionSyncService {
     private final PlaidGateway plaidGateway;
     private final PlaidItemRepository itemRepository;
     private final BankTransactionRepository txnRepository;
-    private final TransactionEventPublisher eventPublisher;
+    private final TransactionUpserter upserter;
 
     public TransactionSyncService(PlaidGateway plaidGateway,
                                   PlaidItemRepository itemRepository,
                                   BankTransactionRepository txnRepository,
-                                  TransactionEventPublisher eventPublisher) {
+                                  TransactionUpserter upserter) {
         this.plaidGateway = plaidGateway;
         this.itemRepository = itemRepository;
         this.txnRepository = txnRepository;
-        this.eventPublisher = eventPublisher;
+        this.upserter = upserter;
     }
 
     /** Sync a single Item identified by its Plaid {@code item_id} (as sent in webhooks). */
@@ -59,13 +54,13 @@ public class TransactionSyncService {
 
             if (resp.getAdded() != null) {
                 for (com.plaid.client.model.Transaction t : resp.getAdded()) {
-                    upsert(item, t);
+                    upserter.upsert(item, t);
                     changed++;
                 }
             }
             if (resp.getModified() != null) {
                 for (com.plaid.client.model.Transaction t : resp.getModified()) {
-                    upsert(item, t);
+                    upserter.upsert(item, t);
                     changed++;
                 }
             }
@@ -86,57 +81,5 @@ public class TransactionSyncService {
 
         log.info("Synced Plaid item {} — {} transaction changes applied", item.getPlaidItemId(), changed);
         return changed;
-    }
-
-    /** Insert-or-update a single transaction, keyed on the Plaid transaction id. */
-    private void upsert(PlaidItem item, com.plaid.client.model.Transaction t) {
-        BankTransaction e = txnRepository.findByPlaidTransactionId(t.getTransactionId())
-                .orElseGet(BankTransaction::new);
-
-        boolean isNew = e.getId() == null;
-        if (isNew) {
-            e.setId(UUID.randomUUID());
-            e.setPlaidTransactionId(t.getTransactionId());
-            e.setPlaidItem(item);
-            e.setUserId(item.getUserId());
-        }
-
-        e.setMerchantRaw(t.getName());
-        e.setMerchantName(t.getMerchantName());
-        e.setAmount(t.getAmount() != null ? BigDecimal.valueOf(t.getAmount()) : BigDecimal.ZERO);
-        e.setIsoCurrency(t.getIsoCurrencyCode());
-        e.setTxnDate(t.getDate());
-
-        PersonalFinanceCategory pfc = t.getPersonalFinanceCategory();
-        e.setPlaidCategory(pfc != null ? pfc.getPrimary() : null);
-
-        Location loc = t.getLocation();
-        if (loc != null) {
-            e.setLocationCity(loc.getCity());
-            e.setLocationRegion(loc.getRegion());
-        }
-
-        e.setPending(Boolean.TRUE.equals(t.getPending()));
-
-        txnRepository.save(e);
-
-        // Publish only for newly-inserted rows so downstream scoring/aggregation isn't
-        // re-triggered on every modification re-sync. Fan-out happens on the broker side.
-        if (isNew) {
-            eventPublisher.publishIngested(toEvent(e));
-        }
-    }
-
-    private TransactionIngested toEvent(BankTransaction e) {
-        return new TransactionIngested(
-                e.getId(),
-                e.getUserId(),
-                e.getMerchantRaw(),
-                e.getMerchantName(),
-                e.getAmount(),
-                e.getIsoCurrency(),
-                e.getTxnDate(),
-                e.getLocationCity(),
-                e.getLocationRegion());
     }
 }

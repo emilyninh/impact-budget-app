@@ -1,7 +1,6 @@
 package com.impactbudget.categorization;
 
 import com.impactbudget.common.TransactionIngested;
-import com.impactbudget.common.TransactionScored;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,9 +17,11 @@ import java.util.UUID;
  *   <li>normalize the merchant string,</li>
  *   <li>look it up in the {@link MerchantScore} cache — a hit means no LLM call,</li>
  *   <li>on a miss, ask Claude, then overlay curated ground truth, and cache the result,</li>
- *   <li>write the per-transaction {@link ImpactScore} (idempotent) and publish
- *       {@link TransactionScored}.</li>
+ *   <li>persist the per-transaction {@link ImpactScore} and enqueue {@code TransactionScored}
+ *       atomically via {@link ScoringPersistence} (transactional outbox).</li>
  * </ol>
+ * The network-bound scoring runs outside any transaction; only the final DB write is
+ * transactional.
  */
 @Service
 public class CategorizationService {
@@ -33,8 +34,7 @@ public class CategorizationService {
     private final OpenFoodFactsEnricher openFoodFactsEnricher;
     private final WikidataLocalEnricher wikidataLocalEnricher;
     private final MerchantCategoryResolver categoryResolver;
-    private final ImpactScoreRepository impactScoreRepository;
-    private final TransactionScoredPublisher publisher;
+    private final ScoringPersistence scoringPersistence;
     private final MeterRegistry meterRegistry;
 
     public CategorizationService(MerchantScoreRepository merchantScoreRepository,
@@ -43,8 +43,7 @@ public class CategorizationService {
                                  OpenFoodFactsEnricher openFoodFactsEnricher,
                                  WikidataLocalEnricher wikidataLocalEnricher,
                                  MerchantCategoryResolver categoryResolver,
-                                 ImpactScoreRepository impactScoreRepository,
-                                 TransactionScoredPublisher publisher,
+                                 ScoringPersistence scoringPersistence,
                                  MeterRegistry meterRegistry) {
         this.merchantScoreRepository = merchantScoreRepository;
         this.curatedOverrideService = curatedOverrideService;
@@ -52,8 +51,7 @@ public class CategorizationService {
         this.openFoodFactsEnricher = openFoodFactsEnricher;
         this.wikidataLocalEnricher = wikidataLocalEnricher;
         this.categoryResolver = categoryResolver;
-        this.impactScoreRepository = impactScoreRepository;
-        this.publisher = publisher;
+        this.scoringPersistence = scoringPersistence;
         this.meterRegistry = meterRegistry;
     }
 
@@ -61,12 +59,7 @@ public class CategorizationService {
         String normalized = MerchantNormalizer.normalize(event.merchantRaw());
         MerchantScoring scoring = resolveMerchantScoring(normalized, event.merchantRaw());
 
-        saveImpactScore(event, scoring);
-        publisher.publishScored(new TransactionScored(
-                event.transactionId(), event.userId(), displayMerchant(scoring, event), event.amount(),
-                event.txnDate(), scoring.category(), scoring.localScore(), scoring.localIndependent(),
-                scoring.sustainabilityScore(), scoring.materialFlags(),
-                scoring.confidence(), scoring.source()));
+        scoringPersistence.persist(event, scoring);
 
         log.info("Scored txn {} [{}] local={} sustainability={} source={}",
                 event.transactionId(), normalized, scoring.localScore(),
@@ -128,31 +121,6 @@ public class CategorizationService {
         ms.setConfidence(s.confidence());
         ms.setRationale(s.rationale());
         ms.setSource(s.source());
-    }
-
-    private void saveImpactScore(TransactionIngested event, MerchantScoring s) {
-        ImpactScore score = impactScoreRepository.findByTransactionId(event.transactionId())
-                .orElseGet(ImpactScore::new);
-        if (score.getId() == null) {
-            score.setId(UUID.randomUUID());
-            score.setTransactionId(event.transactionId());
-        }
-        score.setUserId(event.userId());
-        score.setCategory(s.category());
-        score.setLocalScore(s.localScore());
-        score.setLocalIndependent(s.localIndependent());
-        score.setSustainabilityScore(s.sustainabilityScore());
-        score.setMaterialFlags(joinFlags(s.materialFlags()));
-        score.setConfidence(s.confidence());
-        score.setSource(s.source());
-        impactScoreRepository.save(score);
-    }
-
-    private String displayMerchant(MerchantScoring scoring, TransactionIngested event) {
-        if (scoring.cleanedMerchant() != null && !scoring.cleanedMerchant().isBlank()) {
-            return scoring.cleanedMerchant();
-        }
-        return event.merchantName() != null ? event.merchantName() : event.merchantRaw();
     }
 
     private MerchantScoring fromEntity(MerchantScore ms) {

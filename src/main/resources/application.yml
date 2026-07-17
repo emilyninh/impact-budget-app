@@ -117,6 +117,19 @@ management:
     metrics:
       export:
         enabled: true
+  # Distributed tracing across the REST -> outbox -> Kafka -> consumer pipeline, exported via
+  # OTLP to Grafana Tempo. Sample everything in dev; lower TRACING_SAMPLE_RATE in production.
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+# Transactional outbox relay: how often to publish committed-but-unsent events to Kafka.
+outbox:
+  relay:
+    interval-ms: ${OUTBOX_RELAY_INTERVAL_MS:1000}
 
 # Dev-only demo data (sample transactions + goals through the real pipeline).
 # Off by default and in tests; enabled in docker-compose for local runs.

@@ -3,6 +3,7 @@ package com.impactbudget;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Impact Budget — a personal finance tracker that categorizes spending by <em>impact</em>
@@ -14,6 +15,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
  */
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@EnableScheduling   // drives the transactional-outbox relay
 public class ImpactBudgetApplication {
 
     public static void main(String[] args) {

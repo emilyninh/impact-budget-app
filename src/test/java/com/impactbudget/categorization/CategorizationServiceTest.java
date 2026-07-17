@@ -1,7 +1,6 @@
 package com.impactbudget.categorization;
 
 import com.impactbudget.common.TransactionIngested;
-import com.impactbudget.common.TransactionScored;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,9 +36,7 @@ class CategorizationServiceTest {
     @Mock
     WikidataLocalEnricher wikidataLocalEnricher;
     @Mock
-    ImpactScoreRepository impactScoreRepository;
-    @Mock
-    TransactionScoredPublisher publisher;
+    ScoringPersistence scoringPersistence;
 
     CategorizationService service;
 
@@ -47,8 +44,7 @@ class CategorizationServiceTest {
     void setUp() {
         service = new CategorizationService(merchantScoreRepository, curatedOverrideService,
                 scoringClient, openFoodFactsEnricher, wikidataLocalEnricher,
-                new MerchantCategoryResolver(), impactScoreRepository,
-                publisher, new SimpleMeterRegistry());
+                new MerchantCategoryResolver(), scoringPersistence, new SimpleMeterRegistry());
     }
 
     private TransactionIngested event() {
@@ -58,7 +54,7 @@ class CategorizationServiceTest {
     }
 
     @Test
-    void cacheMissCallsClaudeThenCuratedThenPersistsAndPublishes() {
+    void cacheMissCallsScorerThenCuratedThenCachesAndPersists() {
         when(merchantScoreRepository.findByNormalizedMerchant(anyString())).thenReturn(Optional.empty());
         MerchantScoring base = new MerchantScoring("Local Coffee", "Coffee", 85, true, 60,
                 List.of(), 0.7, "independent", MerchantScoring.SOURCE_LLM);
@@ -67,41 +63,41 @@ class CategorizationServiceTest {
         when(openFoodFactsEnricher.enrich(anyString(), any())).thenAnswer(inv -> inv.getArgument(1));
         when(wikidataLocalEnricher.enrich(anyString(), any())).thenAnswer(inv -> inv.getArgument(1));
         when(curatedOverrideService.apply(anyString(), any())).thenReturn(base);
-        when(impactScoreRepository.findByTransactionId(any())).thenReturn(Optional.empty());
 
         service.categorize(event());
 
-        verify(scoringClient).score(anyString(), anyString());     // LLM was consulted
-        verify(merchantScoreRepository).save(any(MerchantScore.class)); // result cached
-        verify(impactScoreRepository).save(any(ImpactScore.class));
+        verify(scoringClient).score(anyString(), anyString());          // scorer was consulted
+        verify(merchantScoreRepository).save(any(MerchantScore.class));  // result cached
 
-        ArgumentCaptor<TransactionScored> scored = ArgumentCaptor.forClass(TransactionScored.class);
-        verify(publisher).publishScored(scored.capture());
-        assertThat(scored.getValue().localScore()).isEqualTo(85);
-        assertThat(scored.getValue().amount()).isEqualByComparingTo("4.50");
+        // Persistence + outbox enqueue happen atomically in the collaborator.
+        ArgumentCaptor<TransactionIngested> evt = ArgumentCaptor.forClass(TransactionIngested.class);
+        ArgumentCaptor<MerchantScoring> scoring = ArgumentCaptor.forClass(MerchantScoring.class);
+        verify(scoringPersistence).persist(evt.capture(), scoring.capture());
+        assertThat(scoring.getValue().localScore()).isEqualTo(85);
+        assertThat(evt.getValue().amount()).isEqualByComparingTo("4.50");
         // Free-text LLM category "Coffee" is normalized onto the fixed taxonomy.
-        assertThat(scored.getValue().category()).isEqualTo("Eating Out");
+        assertThat(scoring.getValue().category()).isEqualTo("Eating Out");
     }
 
     @Test
-    void cacheHitSkipsClaudeEntirely() {
+    void cacheHitSkipsScorerEntirely() {
         MerchantScore cached = new MerchantScore();
         cached.setId(UUID.randomUUID());
         cached.setNormalizedMerchant("LOCAL COFFEE");
         cached.setCleanedMerchant("Local Coffee");
+        cached.setCategory("Eating Out");
         cached.setLocalScore(85);
         cached.setLocalIndependent(true);
         cached.setSustainabilityScore(60);
         cached.setConfidence(0.7);
         cached.setSource(MerchantScoring.SOURCE_LLM);
         when(merchantScoreRepository.findByNormalizedMerchant(anyString())).thenReturn(Optional.of(cached));
-        when(impactScoreRepository.findByTransactionId(any())).thenReturn(Optional.empty());
 
         service.categorize(event());
 
-        // The whole point of the cache: a repeat merchant never hits the LLM again.
+        // The whole point of the cache: a repeat merchant never hits the scorer again.
         verify(scoringClient, never()).score(anyString(), anyString());
         verify(merchantScoreRepository, never()).save(any());
-        verify(publisher).publishScored(any());
+        verify(scoringPersistence).persist(any(), any());
     }
 }

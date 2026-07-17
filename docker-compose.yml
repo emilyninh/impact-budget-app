@@ -83,6 +83,8 @@ services:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
       OPENFOODFACTS_ENABLED: ${OPENFOODFACTS_ENABLED:-true}
+      # Export traces (OTLP/HTTP) to Tempo so the Kafka pipeline shows up in Grafana.
+      OTLP_ENDPOINT: ${OTLP_ENDPOINT:-http://tempo:4318/v1/traces}
       # Dev-only sample data so the dashboard shows something before Plaid is connected.
       # Set DEMO_SEED_ENABLED=false (and `docker compose down -v`) when switching to real data.
       DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-true}
@@ -107,6 +109,16 @@ services:
     depends_on:
       - app
 
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./infra/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempodata:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo query API (Grafana datasource)
+      - "4318:4318"   # OTLP/HTTP receiver
+
   grafana:
     image: grafana/grafana:11.2.2
     environment:
@@ -119,6 +131,8 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+      - tempo
 
 volumes:
   pgdata:
+  tempodata:

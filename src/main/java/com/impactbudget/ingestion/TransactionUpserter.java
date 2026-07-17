@@ -1,0 +1,82 @@
+package com.impactbudget.ingestion;
+
+import com.impactbudget.common.TransactionIngested;
+import com.plaid.client.model.Location;
+import com.plaid.client.model.PersonalFinanceCategory;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+/**
+ * Persists a single Plaid transaction and enqueues its {@link TransactionIngested} event in
+ * one transaction (transactional outbox). Separate bean so {@code @Transactional} applies
+ * (self-invocation from {@link TransactionSyncService}'s loop would bypass the proxy), and so
+ * the transaction stays short — the Plaid network call happens in the caller, not here.
+ */
+@Component
+class TransactionUpserter {
+
+    private final BankTransactionRepository txnRepository;
+    private final TransactionEventPublisher eventPublisher;
+
+    TransactionUpserter(BankTransactionRepository txnRepository, TransactionEventPublisher eventPublisher) {
+        this.txnRepository = txnRepository;
+        this.eventPublisher = eventPublisher;
+    }
+
+    /** Insert-or-update a transaction keyed on the Plaid id; returns whether a new row was created. */
+    @Transactional
+    boolean upsert(PlaidItem item, com.plaid.client.model.Transaction t) {
+        BankTransaction e = txnRepository.findByPlaidTransactionId(t.getTransactionId())
+                .orElseGet(BankTransaction::new);
+
+        boolean isNew = e.getId() == null;
+        if (isNew) {
+            e.setId(UUID.randomUUID());
+            e.setPlaidTransactionId(t.getTransactionId());
+            e.setPlaidItem(item);
+            e.setUserId(item.getUserId());
+        }
+
+        e.setMerchantRaw(t.getName());
+        e.setMerchantName(t.getMerchantName());
+        e.setAmount(t.getAmount() != null ? BigDecimal.valueOf(t.getAmount()) : BigDecimal.ZERO);
+        e.setIsoCurrency(t.getIsoCurrencyCode());
+        e.setTxnDate(t.getDate());
+
+        PersonalFinanceCategory pfc = t.getPersonalFinanceCategory();
+        e.setPlaidCategory(pfc != null ? pfc.getPrimary() : null);
+
+        Location loc = t.getLocation();
+        if (loc != null) {
+            e.setLocationCity(loc.getCity());
+            e.setLocationRegion(loc.getRegion());
+        }
+
+        e.setPending(Boolean.TRUE.equals(t.getPending()));
+
+        txnRepository.save(e);
+
+        // Publish only for newly-inserted rows so a modification re-sync doesn't re-trigger
+        // scoring. The outbox insert commits atomically with the row above.
+        if (isNew) {
+            eventPublisher.publishIngested(toEvent(e));
+        }
+        return isNew;
+    }
+
+    private TransactionIngested toEvent(BankTransaction e) {
+        return new TransactionIngested(
+                e.getId(),
+                e.getUserId(),
+                e.getMerchantRaw(),
+                e.getMerchantName(),
+                e.getAmount(),
+                e.getIsoCurrency(),
+                e.getTxnDate(),
+                e.getLocationCity(),
+                e.getLocationRegion());
+    }
+}

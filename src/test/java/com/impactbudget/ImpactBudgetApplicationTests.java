@@ -13,7 +13,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * <p>{@code disabledWithoutDocker = true} skips this cleanly on machines with no Docker
  * daemon (so {@code mvn verify} still passes locally) while it runs in CI, which has Docker.
  */
-@SpringBootTest
+@SpringBootTest(properties = "management.tracing.enabled=false")  // no OTLP collector in tests
 @Import(TestcontainersConfiguration.class)
 @Testcontainers(disabledWithoutDocker = true)
 class ImpactBudgetApplicationTests {

@@ -35,7 +35,8 @@ import static org.awaitility.Awaitility.await;
         // Deterministic & offline: neutral scorer, no external enrichment calls.
         "categorization.scoring.provider=none",
         "openfoodfacts.enabled=false",
-        "wikidata.enabled=false"
+        "wikidata.enabled=false",
+        "management.tracing.enabled=false"   // no OTLP collector in tests
 })
 @Import(TestcontainersConfiguration.class)
 @Testcontainers(disabledWithoutDocker = true)
