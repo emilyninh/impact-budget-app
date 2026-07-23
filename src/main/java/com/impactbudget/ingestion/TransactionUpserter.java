@@ -77,6 +77,7 @@ class TransactionUpserter {
                 e.getIsoCurrency(),
                 e.getTxnDate(),
                 e.getLocationCity(),
-                e.getLocationRegion());
+                e.getLocationRegion(),
+                e.getPlaidCategory());   // Plaid's category as a scoring hint
     }
 }

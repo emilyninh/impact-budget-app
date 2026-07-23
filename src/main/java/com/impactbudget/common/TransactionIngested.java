@@ -21,6 +21,7 @@ public record TransactionIngested(
         String isoCurrency,
         LocalDate txnDate,
         String locationCity,
-        String locationRegion
+        String locationRegion,
+        String sourceCategory   // bank-provided category (Plaid PFC or a CSV column), used as a scoring hint; may be null
 ) {
 }

@@ -57,7 +57,7 @@ public class CategorizationService {
 
     public void categorize(TransactionIngested event) {
         String normalized = MerchantNormalizer.normalize(event.merchantRaw());
-        MerchantScoring scoring = resolveMerchantScoring(normalized, event.merchantRaw());
+        MerchantScoring scoring = resolveMerchantScoring(normalized, event.merchantRaw(), event.sourceCategory());
 
         scoringPersistence.persist(event, scoring);
 
@@ -67,7 +67,7 @@ public class CategorizationService {
     }
 
     /** Cache-first resolution: reuse a cached score, else LLM + curated override, then cache it. */
-    private MerchantScoring resolveMerchantScoring(String normalized, String rawMerchant) {
+    private MerchantScoring resolveMerchantScoring(String normalized, String rawMerchant, String sourceCategory) {
         return merchantScoreRepository.findByNormalizedMerchant(normalized)
                 .map(entity -> {
                     meterRegistry.counter("categorization.cache", "result", "hit").increment();
@@ -82,17 +82,18 @@ public class CategorizationService {
                     MerchantScoring withEco = openFoodFactsEnricher.enrich(display, base);
                     MerchantScoring withLocal = wikidataLocalEnricher.enrich(normalized, withEco);
                     MerchantScoring overridden = curatedOverrideService.apply(normalized, withLocal);
-                    // Normalize the (possibly free-text / null) category onto the fixed taxonomy,
-                    // so both the cache and the published event carry a clean category value.
-                    MerchantScoring resolved = withCategory(overridden, display);
+                    // Normalize the category onto the fixed taxonomy, falling back to the bank's
+                    // own category as a hint when no scorer supplied one (e.g. imported data).
+                    MerchantScoring resolved = withCategory(overridden, display, sourceCategory);
                     cache(normalized, resolved);
                     return resolved;
                 });
     }
 
     /** Return a copy of the scoring with its category normalized onto the fixed taxonomy. */
-    private MerchantScoring withCategory(MerchantScoring s, String display) {
-        String category = categoryResolver.resolve(display, s.category());
+    private MerchantScoring withCategory(MerchantScoring s, String display, String sourceCategory) {
+        String hint = s.category() != null ? s.category() : sourceCategory;
+        String category = categoryResolver.resolve(display, hint);
         return new MerchantScoring(s.cleanedMerchant(), category, s.localScore(),
                 s.localIndependent(), s.sustainabilityScore(), s.materialFlags(),
                 s.confidence(), s.rationale(), s.source());

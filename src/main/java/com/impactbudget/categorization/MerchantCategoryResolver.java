@@ -30,14 +30,16 @@ public class MerchantCategoryResolver {
                     "walmart", "safeway", "kroger", "aldi", "costco", "farmers market", "market"),
             new Rule(EATING_OUT, "eating out", "restaurant", "dining", "food", "cafe", "coffee",
                     "starbucks", "mcdonald", "blue bottle", "rosie", "chipotle", "doordash",
-                    "grubhub", "uber eats", "bar", "grill", "pizza", "chocolonely", "tea"),
+                    "grubhub", "uber eats", "bar", "grill", "pizza", "chocolonely", "tea", "bakery",
+                    "bagel", "nosh"),
             new Rule(SUBSCRIPTIONS, "subscription", "subscriptions", "netflix", "spotify", "hulu",
-                    "disney+", "prime", "youtube", "membership", "saas"),
+                    "disney+", "prime", "youtube", "membership", "saas", "entertainment", "kindle"),
             new Rule(TRANSPORT, "transport", "transportation", "uber", "lyft", "shell", "chevron",
-                    "exxon", "gas", "fuel", "transit", "parking", "bart", "metro"),
+                    "exxon", "gas", "fuel", "transit", "parking", "bart", "metro", "travel", "airfare",
+                    "automotive", "airline", "airlines", "mta", "taxi"),
             new Rule(SHOPPING, "shopping", "retail", "apparel", "clothing", "amazon", "shein",
                     "h&m", "zara", "rei", "patagonia", "allbirds", "bombas", "klean kanteen",
-                    "target", "store", "outfitters"));
+                    "target", "store", "outfitters", "merchandise", "pharmacy", "cvs", "walgreens"));
 
     /**
      * Resolve to a taxonomy value.

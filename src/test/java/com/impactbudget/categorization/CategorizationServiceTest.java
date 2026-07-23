@@ -50,7 +50,7 @@ class CategorizationServiceTest {
     private TransactionIngested event() {
         return new TransactionIngested(
                 UUID.randomUUID(), "user-1", "TST*SQ*LOCAL COFFEE 12345", "Local Coffee",
-                new BigDecimal("4.50"), "USD", LocalDate.of(2026, 7, 1), "Portland", "OR");
+                new BigDecimal("4.50"), "USD", LocalDate.of(2026, 7, 1), "Portland", "OR", null);
     }
 
     @Test

@@ -21,6 +21,9 @@ hs_err_pid*
 .env
 *.local
 
+# Personal bank-statement CSVs (imported at runtime, never committed)
+data/
+
 # Node / frontend
 node_modules/
 frontend/dist/

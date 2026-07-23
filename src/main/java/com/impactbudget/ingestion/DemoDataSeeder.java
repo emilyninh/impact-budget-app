@@ -118,7 +118,7 @@ class DemoDataSeeder implements ApplicationRunner {
 
             eventPublisher.publishIngested(new TransactionIngested(
                     txnId, DEMO_USER, demo.merchantRaw(), demo.merchantName(),
-                    demo.amount(), "USD", demo.date(), "Portland", "OR"));
+                    demo.amount(), "USD", demo.date(), "Portland", "OR", null));
         }
 
         log.info("Demo seed: {} sample transactions published for {}", demos.size(), DEMO_USER);
