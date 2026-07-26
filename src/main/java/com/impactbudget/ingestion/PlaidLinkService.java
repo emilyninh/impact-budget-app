@@ -56,4 +56,20 @@ public class PlaidLinkService {
         syncService.sync(item);
         return item.getPlaidItemId();
     }
+
+    /**
+     * Re-sync all of a user's linked Plaid items on demand — useful when sandbox transactions
+     * weren't ready at link time, or to refresh without a webhook. Returns the number of changes.
+     * Skips synthetic items (CSV import, demo seed) that aren't backed by a Plaid access token.
+     */
+    public int syncAll(String userId) {
+        int changed = 0;
+        for (PlaidItem item : itemRepository.findByUserId(userId)) {
+            String token = item.getAccessToken();
+            if (token != null && token.startsWith("access-")) {   // real Plaid item only
+                changed += syncService.sync(item);
+            }
+        }
+        return changed;
+    }
 }

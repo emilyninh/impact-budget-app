@@ -36,6 +36,12 @@ class PlaidLinkController {
         return new ExchangeResponse(itemId);
     }
 
+    /** Re-sync the current user's linked banks on demand (no webhook needed). */
+    @PostMapping("/sync")
+    SyncResponse sync(@AuthenticationPrincipal String userId) {
+        return new SyncResponse(linkService.syncAll(userId));
+    }
+
     record LinkTokenResponse(String linkToken) {
     }
 
@@ -43,5 +49,8 @@ class PlaidLinkController {
     }
 
     record ExchangeResponse(String itemId) {
+    }
+
+    record SyncResponse(int changed) {
     }
 }

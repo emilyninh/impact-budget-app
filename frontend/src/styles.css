@@ -432,6 +432,17 @@ td.merchant {
   white-space: nowrap;
 }
 
+/* Connect a bank (Plaid) */
+.connect-bank {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connect-bank-error {
+  font-size: 12px;
+}
+
 /* Live indicator */
 .live-dot {
   color: var(--color-local);

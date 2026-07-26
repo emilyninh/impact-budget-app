@@ -28,6 +28,7 @@ import { GoalTracker } from "./components/GoalTracker";
 import { GreenerSwaps } from "./components/GreenerSwaps";
 import { TransactionList } from "./components/TransactionList";
 import { LoginPage } from "./components/LoginPage";
+import { ConnectBank } from "./components/ConnectBank";
 import { useAuth } from "./AuthContext";
 
 export default function App() {
@@ -128,6 +129,7 @@ function Dashboard() {
             </span>
           )}
           <span className="muted">{user?.displayName ?? user?.email}</span>
+          <ConnectBank onLinked={load} />
           <button className="logout-btn" type="button" onClick={logout}>
             Sign out
           </button>

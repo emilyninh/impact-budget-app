@@ -134,6 +134,34 @@ For real (non-fallback) impact scores — free & local — install [Ollama](http
 and `ANTHROPIC_API_KEY` in `.env`. With neither, scoring uses a neutral heuristic + the free
 Open Food Facts / Wikidata / curated enrichment (the app still runs and scores).
 
+### Connecting a bank
+
+Two ways to bring in transactions — both flow through the same scoring pipeline:
+
+- **CSV import** — upload a Capital One CSV export to `POST /api/v1/import/capital-one`
+  (multipart `file`). Good for real statements without linking an account.
+- **Plaid** — click **Connect a bank** in the header, then **Sync**. Add free sandbox keys to
+  `.env` first (from [dashboard.plaid.com](https://dashboard.plaid.com) → Keys), then restart:
+
+  ```
+  PLAID_CLIENT_ID=...
+  PLAID_SECRET=...          # the *sandbox* secret
+  PLAID_ENV=sandbox
+  ```
+
+  In **sandbox**, Plaid rejects real personal details — use its test values in the Link widget:
+
+  | Field | Value |
+  | --- | --- |
+  | Phone number | `(415) 555-0011` |
+  | OTP / verification code | `123456` |
+  | Username | `user_good` |
+  | Password | `pass_good` |
+
+  Sandbox transactions are generated a moment *after* you finish linking, so the initial sync
+  often lands empty — click **Sync** once and they appear. For hands-off updates, expose
+  `/webhooks/plaid` via `ngrok http 8080` and set `PLAID_WEBHOOK_URL`.
+
 ### Frontend dev server (hot reload)
 
 For UI work, run Vite separately (proxies `/api` to the backend on :8080):

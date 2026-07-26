@@ -88,3 +88,19 @@ export function setBudget(monthlyLimit: number): Promise<BudgetStatus> {
     body: JSON.stringify({ monthlyLimit }),
   });
 }
+
+// --- Plaid Link (connect a bank) -------------------------------------------
+export function createPlaidLinkToken(): Promise<{ linkToken: string }> {
+  return request<{ linkToken: string }>("/plaid/link-token", { method: "POST" });
+}
+
+export function exchangePlaidPublicToken(publicToken: string): Promise<{ itemId: string }> {
+  return request<{ itemId: string }>("/plaid/exchange", {
+    method: "POST",
+    body: JSON.stringify({ publicToken }),
+  });
+}
+
+export function syncPlaid(): Promise<{ changed: number }> {
+  return request<{ changed: number }>("/plaid/sync", { method: "POST" });
+}
