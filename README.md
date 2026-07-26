@@ -172,8 +172,10 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 
 ### Deploying
 
-See **[DEPLOY.md](DEPLOY.md)** — one Fly.io app (SPA bundled in) plus private Postgres, Redis,
-and Redpanda apps, with CI that builds a GHCR image and deploys on green `main`.
+- **Free (single VM):** **[deploy/vm/README.md](deploy/vm/README.md)** — the whole stack with
+  automatic HTTPS on an Oracle Cloud Always-Free ARM VM, $0.
+- **Fly.io:** **[DEPLOY.md](DEPLOY.md)** — managed Postgres/Redis + a Redpanda app, with CI that
+  builds a GHCR image and deploys on green `main` (pay-as-you-go).
 
 ## Observability
 

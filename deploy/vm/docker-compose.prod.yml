@@ -1,0 +1,104 @@
+# Production stack for a single VM (e.g. Oracle Cloud Always Free ARM).
+# Run from the repo root:  docker compose -f deploy/vm/docker-compose.prod.yml up -d --build
+#
+# Security: only Caddy publishes ports (80/443). Postgres, Redis, and Redpanda have NO host
+# port mappings — they're reachable only on the internal compose network, never from the
+# internet. Secrets come from deploy/vm/.env (git-ignored).
+
+name: impact-budget
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: impactbudget
+      POSTGRES_USER: impactbudget
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-impactbudget}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U impactbudget"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redpanda:
+    image: redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --overprovisioned
+      - --node-id=0
+      - --kafka-addr=PLAINTEXT://0.0.0.0:29092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:29092
+    volumes:
+      - redpandadata:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      redpanda: { condition: service_healthy }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/impactbudget
+      DB_USER: impactbudget
+      DB_PASSWORD: ${DB_PASSWORD:-impactbudget}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:29092
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in deploy/vm/.env}
+      # Free public demo: neutral scorer + free Open Food Facts / Wikidata / curated enrichment.
+      # Set SCORING_PROVIDER=ollama + run Ollama on the VM for local-merchant detection.
+      SCORING_PROVIDER: ${SCORING_PROVIDER:-none}
+      OPENFOODFACTS_ENABLED: ${OPENFOODFACTS_ENABLED:-true}
+      MANAGEMENT_TRACING_ENABLED: "false"
+      DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-true}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      PLAID_CLIENT_ID: ${PLAID_CLIENT_ID:-}
+      PLAID_SECRET: ${PLAID_SECRET:-}
+      PLAID_ENV: ${PLAID_ENV:-sandbox}
+      PLAID_WEBHOOK_URL: ${PLAID_WEBHOOK_URL:-}
+    restart: unless-stopped
+
+  # Reverse proxy: terminates HTTPS (auto Let's Encrypt cert for SITE_ADDRESS) and forwards
+  # to the app. The only service exposed to the internet.
+  caddy:
+    image: caddy:2
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in deploy/vm/.env (e.g. 1-2-3-4.sslip.io)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redpandadata:
+  caddydata:
+  caddyconfig:

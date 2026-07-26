@@ -1,0 +1,6 @@
+# Automatic HTTPS (Let's Encrypt) for SITE_ADDRESS, reverse-proxying to the app.
+# SITE_ADDRESS is injected from deploy/vm/.env — e.g. 1-2-3-4.sslip.io (your VM's public IP
+# with dots as dashes), which resolves to your IP with no DNS setup and gets a real cert.
+{$SITE_ADDRESS} {
+	reverse_proxy app:8080
+}
