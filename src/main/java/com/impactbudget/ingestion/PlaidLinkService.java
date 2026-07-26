@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -16,6 +18,8 @@ import java.util.UUID;
 public class PlaidLinkService {
 
     private static final Logger log = LoggerFactory.getLogger(PlaidLinkService.class);
+    /** How long after linking to keep auto-retrying the sync while Plaid readies transactions. */
+    private static final Duration BACKFILL_WINDOW = Duration.ofMinutes(3);
 
     private final PlaidGateway plaidGateway;
     private final PlaidItemRepository itemRepository;
@@ -48,12 +52,19 @@ public class PlaidLinkService {
         }
         item.setUserId(userId);
         item.setAccessToken(result.accessToken());
+        // Open a backfill window: Plaid readies transactions asynchronously, so if the first
+        // sync comes back empty the scheduled PlaidBackfillJob keeps retrying until they arrive.
+        item.setBackfillUntil(Instant.now().plus(BACKFILL_WINDOW));
         item = itemRepository.save(item);
 
         log.info("Linked Plaid item {} for user {}", item.getPlaidItemId(), userId);
 
-        // Initial backfill; webhooks keep it fresh thereafter.
-        syncService.sync(item);
+        // Try immediately; if data's already there, close the backfill window.
+        int changed = syncService.sync(item);
+        if (changed > 0) {
+            item.setBackfillUntil(null);
+            itemRepository.save(item);
+        }
         return item.getPlaidItemId();
     }
 

@@ -11,4 +11,7 @@ public interface PlaidItemRepository extends JpaRepository<PlaidItem, UUID> {
     Optional<PlaidItem> findByPlaidItemId(String plaidItemId);
 
     List<PlaidItem> findByUserId(String userId);
+
+    /** Items still in their post-link backfill window (see PlaidBackfillJob). */
+    List<PlaidItem> findByBackfillUntilIsNotNull();
 }

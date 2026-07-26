@@ -36,6 +36,10 @@ public class PlaidItem {
     @Column(name = "transactions_cursor", columnDefinition = "text")
     private String transactionsCursor;
 
+    /** While set (and in the future), the backfill job keeps re-syncing this newly-linked item. */
+    @Column(name = "backfill_until")
+    private Instant backfillUntil;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -90,6 +94,14 @@ public class PlaidItem {
 
     public void setTransactionsCursor(String transactionsCursor) {
         this.transactionsCursor = transactionsCursor;
+    }
+
+    public Instant getBackfillUntil() {
+        return backfillUntil;
+    }
+
+    public void setBackfillUntil(Instant backfillUntil) {
+        this.backfillUntil = backfillUntil;
     }
 
     public Instant getCreatedAt() {

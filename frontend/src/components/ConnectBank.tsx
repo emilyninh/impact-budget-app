@@ -65,7 +65,7 @@ export function ConnectBank({ onLinked }: { onLinked: () => void }) {
         onClick={onSync}
         title="Pull the latest transactions from your linked banks"
       >
-        {status === "syncing" ? "Syncing…" : "Sync"}
+        {status === "syncing" ? "Refreshing…" : "Refresh"}
       </button>
       {status === "error" && (
         <span className="muted connect-bank-error">Plaid unavailable — check credentials</span>

@@ -443,6 +443,17 @@ td.merchant {
   font-size: 12px;
 }
 
+/* "Importing your transactions…" banner shown after linking a bank */
+.importing {
+  background: var(--track);
+  border: 1px solid var(--border);
+  color: var(--slate);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
 /* Live indicator */
 .live-dot {
   color: var(--color-local);

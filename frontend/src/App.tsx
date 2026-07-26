@@ -49,6 +49,7 @@ function Dashboard() {
   const [categories, setCategories] = useState<CategoryBreakdown[]>([]);
   const [swaps, setSwaps] = useState<Swap[]>([]);
   const [live, setLive] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -70,6 +71,7 @@ function Dashboard() {
       setCategories(cats);
       setSwaps(sw);
       setError(null);
+      if (tx.length > 0) setImporting(false); // data has arrived — stop the "importing" banner
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     }
@@ -94,6 +96,7 @@ function Dashboard() {
       } catch {
         /* ignore malformed frame */
       }
+      setImporting(false); // pipeline produced data — the bank import landed
       clearTimeout(debounce);
       debounce = setTimeout(() => void load(), 400); // coalesce bursts, refresh the rest
     });
@@ -115,6 +118,14 @@ function Dashboard() {
     setBudgetState(updated);
   };
 
+  // After linking a bank, show "importing…" until transactions arrive (via SSE / next load).
+  // The backend keeps re-syncing in the background, so no manual action is needed.
+  const onLinked = useCallback(() => {
+    setImporting(true);
+    void load();
+    window.setTimeout(() => setImporting(false), 180000); // safety: never stick past the backfill window
+  }, [load]);
+
   return (
     <div className="app">
       <header className="app-header">
@@ -129,7 +140,7 @@ function Dashboard() {
             </span>
           )}
           <span className="muted">{user?.displayName ?? user?.email}</span>
-          <ConnectBank onLinked={load} />
+          <ConnectBank onLinked={onLinked} />
           <button className="logout-btn" type="button" onClick={logout}>
             Sign out
           </button>
@@ -139,6 +150,12 @@ function Dashboard() {
       {error && (
         <div className="error" role="alert">
           Couldn’t reach the API: {error}
+        </div>
+      )}
+
+      {importing && (
+        <div className="importing" role="status">
+          Connecting your bank — importing transactions… this can take a moment.
         </div>
       )}
 
