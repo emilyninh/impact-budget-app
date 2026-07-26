@@ -2,7 +2,7 @@
 
 **A budgeting tool that categorizes spending by _impact_, not by type.**
 
-[![CI](https://github.com/YOUR-GH-USERNAME/impact-budget/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR-GH-USERNAME/impact-budget/actions/workflows/ci.yml)
+[![CI](https://github.com/emilyninh/impact-budget-app/actions/workflows/ci.yml/badge.svg)](https://github.com/emilyninh/impact-budget-app/actions/workflows/ci.yml)
 
 Traditional budgeting apps tell you _how much_ you spent on "Groceries" or "Shopping."
 Impact Budget tells you _where that money went_: what share of your discretionary spending
@@ -13,11 +13,12 @@ conventional, B‑Corp vs. not). Then it lets you set goals — not just "save m
 
 It's a financial mirror for your values.
 
-## Live demo
+## Try it
 
-**https://impact-budget.fly.dev** · sign in with **`demo@impactbudget.app`** / **`demopass123`**
-(or hit "Explore the demo account"). The demo user is seeded with a few months of sample
-spending. See [DEPLOY.md](DEPLOY.md) to run your own.
+Run the whole stack locally with one command (see [Running locally](#running-locally)), then
+sign in with **`demo@impactbudget.app`** / **`demopass123`** (or hit "Explore the demo
+account") for a dashboard seeded with a few months of sample spending. A one-command Fly.io
+deploy is wired up in [DEPLOY.md](DEPLOY.md).
 
 <!-- Add a dashboard screenshot / GIF at docs/dashboard.png and uncomment:
 ![Impact Budget dashboard](docs/dashboard.png)
