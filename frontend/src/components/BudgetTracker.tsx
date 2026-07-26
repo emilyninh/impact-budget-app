@@ -21,7 +21,7 @@ export function BudgetTracker({
   onSetBudget,
 }: {
   budget: BudgetStatus | null;
-  onSetBudget: (limit: number) => void;
+  onSetBudget: (limit: number) => void | Promise<void>;
 }) {
   if (!budget) {
     return null;
@@ -93,18 +93,26 @@ function BudgetForm({
   onSetBudget,
 }: {
   current: number | null;
-  onSetBudget: (limit: number) => void;
+  onSetBudget: (limit: number) => void | Promise<void>;
 }) {
   const [value, setValue] = useState(current != null ? String(current) : "3000");
+  const [submitting, setSubmitting] = useState(false);
 
   return (
     <form
       className="goal-form"
-      onSubmit={(e) => {
+      aria-busy={submitting}
+      onSubmit={async (e) => {
         e.preventDefault();
         const limit = Number(value);
-        if (Number.isFinite(limit) && limit > 0) {
-          onSetBudget(limit);
+        if (submitting || !Number.isFinite(limit) || limit <= 0) {
+          return;
+        }
+        setSubmitting(true);
+        try {
+          await onSetBudget(limit);
+        } finally {
+          setSubmitting(false);
         }
       }}
     >
@@ -119,7 +127,9 @@ function BudgetForm({
           style={{ width: 100 }}
         />
       </label>
-      <button type="submit">{current != null ? "Update budget" : "Set budget"}</button>
+      <button type="submit" disabled={submitting}>
+        {submitting ? "Saving…" : current != null ? "Update budget" : "Set budget"}
+      </button>
     </form>
   );
 }

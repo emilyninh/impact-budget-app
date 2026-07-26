@@ -29,5 +29,10 @@ node_modules/
 frontend/dist/
 frontend/.vite/
 
+# Design-tooling scratch (not part of the app)
+.impeccable/
+/package.json
+/package-lock.json
+
 # Logs
 *.log

@@ -1,9 +1,44 @@
 :root {
-  --bg: #f6f7f9;
-  --card: #ffffff;
-  --border: #e6e9ef;
-  --text: #1c2230;
-  --muted: #8a94a6;
+  /* ── Neutral surfaces & ink ──────────────────────────────
+     The cool near-monochrome chrome. See DESIGN.md → Colors. */
+  --bg: #f6f7f9; /* page ground */
+  --card: #ffffff; /* content surface */
+  --border: #e6e9ef; /* the 1px hairline — the only separator */
+  --border-strong: #c7ccd6; /* hairline on hover/emphasis */
+  --track: #eef1f5; /* empty progress track, neutral chip fill */
+  --hover: #f0f2f6; /* neutral hover / segmented-control trough */
+  --text: #1c2230; /* body ink */
+  --slate: #4a5468; /* secondary ink on a tinted chip — 6.7:1 on track */
+  --muted: #666f80; /* labels, hints, secondary text — 4.5:1 on the tab trough, its darkest bg (AA) */
+
+  /* ── Impact dimensions (the two things this app measures) ──
+     Teal = local/independent, amber = sustainable. Fixed mapping. */
+  --color-local: #007c6c; /* teal — 4.8:1 on page, 5.1:1 white-on-teal (AA) */
+  --color-local-wash: #e5f5f2; /* teal tint — local pill / swap flag fill */
+  --color-sustainable: #a46200; /* amber — 4.5:1 on page (AA); was too light at 2.8:1 */
+
+  /* ── Budget state — semantic aliases of the above + a red ── */
+  --budget-ok: var(--color-local); /* on track */
+  --budget-warn: var(--color-sustainable); /* at risk */
+  --budget-over: #c84341; /* over budget — 4.5:1 on page (AA); used nowhere else */
+
+  /* ── Feedback (deliberately distinct from budget-over) ──── */
+  --error-ink: #a12b2b;
+  --error-border: #f5b5b5;
+  --error-wash: #fdecec;
+
+  /* ── Categorical chart palette (no semantic meaning) ──────
+     The ordered palette is [local, sustainable, chart-3…chart-6].
+     These four hold literal values because Recharts reads them via
+     getComputedStyle, which does not resolve var() aliases reliably. */
+  --chart-3: #4c6ef5;
+  --chart-4: #e8590c;
+  --chart-5: #9c36b5;
+  --chart-6: #495057;
+
+  /* ── Elevation — the one sanctioned shadow (selection only) ── */
+  --shadow-selection: 0 1px 2px rgba(0, 0, 0, 0.06);
+
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -49,7 +84,7 @@ body {
 }
 
 .logout-btn:hover {
-  background: #f0f2f6;
+  background: var(--hover);
 }
 
 /* Auth screen */
@@ -79,7 +114,7 @@ body {
   display: flex;
   gap: 4px;
   margin-bottom: 16px;
-  background: #f0f2f6;
+  background: var(--hover);
   border-radius: 8px;
   padding: 4px;
 }
@@ -99,7 +134,7 @@ body {
   background: var(--card);
   color: var(--text);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-selection);
 }
 
 .auth-form {
@@ -128,7 +163,7 @@ body {
   padding: 11px;
   border: none;
   border-radius: 8px;
-  background: #1f9d8b;
+  background: var(--color-local);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
@@ -154,7 +189,7 @@ body {
 
 .auth-demo:hover {
   color: var(--text);
-  border-color: #c7ccd6;
+  border-color: var(--border-strong);
 }
 
 .app-header h1 {
@@ -186,9 +221,9 @@ body {
 }
 
 .error {
-  background: #fdecec;
-  border: 1px solid #f5b5b5;
-  color: #a12b2b;
+  background: var(--error-wash);
+  border: 1px solid var(--error-border);
+  color: var(--error-ink);
   padding: 12px 16px;
   border-radius: 8px;
   margin-bottom: 16px;
@@ -241,7 +276,7 @@ body {
 
 .bar {
   height: 10px;
-  background: #eef1f5;
+  background: var(--track);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -291,6 +326,11 @@ body {
   font-size: 14px;
 }
 
+.goal-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* Transaction table */
 .table-scroll {
   overflow-x: auto;
@@ -314,14 +354,63 @@ td.num {
   text-align: right;
 }
 
+/* Bank merchant descriptors can be long, unbroken strings; let them wrap so a
+   single row can't force the whole table into excessive horizontal scroll. */
+td.merchant {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Legend explaining the 0–100 score axes, sits under the Transactions heading. */
+.table-note {
+  margin: -8px 0 16px;
+  font-size: 13px;
+  max-width: 68ch;
+}
+
+.table-note .pill {
+  margin-left: 0;
+}
+
+/* Score gauge: a 0–100 track + the numeral, right-aligned in the column so the
+   numbers stay on a shared edge and the bars read as a small column of gauges. */
+.score-meter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.score-meter-track {
+  flex: none;
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.score-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+
+.score-meter-num {
+  min-width: 2.5ch;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .pill {
   display: inline-block;
   margin-left: 8px;
   padding: 1px 8px;
   font-size: 11px;
   border-radius: 999px;
-  background: #e5f5f2;
-  color: #1f9d8b;
+  background: var(--color-local-wash);
+  color: var(--color-local);
 }
 
 .score {
@@ -338,14 +427,14 @@ td.num {
   padding: 2px 8px;
   font-size: 12px;
   border-radius: 6px;
-  background: #eef1f5;
-  color: #4a5468;
+  background: var(--track);
+  color: var(--slate);
   white-space: nowrap;
 }
 
 /* Live indicator */
 .live-dot {
-  color: #1f9d8b;
+  color: var(--color-local);
   font-size: 12px;
   font-weight: 600;
 }
@@ -398,8 +487,8 @@ td.num {
   padding: 1px 7px;
   font-size: 11px;
   border-radius: 999px;
-  background: #e5f5f2;
-  color: #1f9d8b;
+  background: var(--color-local-wash);
+  color: var(--color-local);
 }
 
 /* Budget tracker */

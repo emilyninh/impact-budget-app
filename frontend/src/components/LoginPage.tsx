@@ -45,7 +45,9 @@ export function LoginPage() {
   return (
     <div className="auth-shell">
       <div className="card auth-card">
-        <h1 className="auth-title">🌺 Impact Budget</h1>
+        <h1 className="auth-title">
+          <span aria-hidden="true">🌺</span> Impact Budget
+        </h1>
         <p className="muted auth-sub">Spending by impact, not by category.</p>
 
         <div className="auth-tabs">
@@ -99,7 +101,11 @@ export function LoginPage() {
             />
           </label>
 
-          {error && <div className="error">{error}</div>}
+          {error && (
+            <div className="error" role="alert">
+              {error}
+            </div>
+          )}
 
           <button className="auth-primary" type="submit" disabled={busy}>
             {busy ? "…" : mode === "login" ? "Sign in" : "Create account"}

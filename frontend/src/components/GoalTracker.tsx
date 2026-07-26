@@ -7,7 +7,7 @@ export function GoalTracker({
   onCreate,
 }: {
   goals: GoalProgress[];
-  onCreate: (body: CreateGoalRequest) => void;
+  onCreate: (body: CreateGoalRequest) => void | Promise<void>;
 }) {
   return (
     <section className="card">
@@ -50,18 +50,28 @@ function GoalRow({ goal }: { goal: GoalProgress }) {
   );
 }
 
-function GoalForm({ onCreate }: { onCreate: (body: CreateGoalRequest) => void }) {
+function GoalForm({ onCreate }: { onCreate: (body: CreateGoalRequest) => void | Promise<void> }) {
   const [dimension, setDimension] = useState<Dimension>("LOCAL");
   const [baselinePct, setBaseline] = useState(18);
   const [targetPct, setTarget] = useState(30);
   const [targetDate, setTargetDate] = useState("2026-12-31");
+  const [submitting, setSubmitting] = useState(false);
 
   return (
     <form
       className="goal-form"
-      onSubmit={(e) => {
+      aria-busy={submitting}
+      onSubmit={async (e) => {
         e.preventDefault();
-        onCreate({ dimension, baselinePct, targetPct, targetDate });
+        if (submitting) {
+          return;
+        }
+        setSubmitting(true);
+        try {
+          await onCreate({ dimension, baselinePct, targetPct, targetDate });
+        } finally {
+          setSubmitting(false);
+        }
       }}
     >
       <select value={dimension} onChange={(e) => setDimension(e.target.value as Dimension)}>
@@ -88,7 +98,9 @@ function GoalForm({ onCreate }: { onCreate: (body: CreateGoalRequest) => void })
         by
         <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
       </label>
-      <button type="submit">Add goal</button>
+      <button type="submit" disabled={submitting}>
+        {submitting ? "Adding…" : "Add goal"}
+      </button>
     </form>
   );
 }

@@ -122,7 +122,11 @@ function Dashboard() {
           <p className="tagline">Spending by impact, not by category.</p>
         </div>
         <div className="app-header-user">
-          {live && <span className="live-dot" title="Live updates on">● live</span>}
+          {live && (
+            <span className="live-dot" role="status" title="Live updates on">
+              <span aria-hidden="true">●</span> live
+            </span>
+          )}
           <span className="muted">{user?.displayName ?? user?.email}</span>
           <button className="logout-btn" type="button" onClick={logout}>
             Sign out
@@ -130,7 +134,11 @@ function Dashboard() {
         </div>
       </header>
 
-      {error && <div className="error">Couldn’t reach the API: {error}</div>}
+      {error && (
+        <div className="error" role="alert">
+          Couldn’t reach the API: {error}
+        </div>
+      )}
 
       {summary && <ImpactSummary summary={summary} />}
       <BudgetTracker budget={budget} onSetBudget={onSetBudget} />

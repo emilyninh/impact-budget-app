@@ -19,7 +19,9 @@ export function GreenerSwaps({ swaps }: { swaps: Swap[] }) {
               <span className="category">{s.category}</span>
               <Score value={s.fromScore} />
             </div>
-            <div className="swap-arrow">→</div>
+            <div className="swap-arrow" aria-hidden="true">
+              →
+            </div>
             <div className="swap-suggestions">
               {s.suggestions.map((alt, j) => (
                 <div className="swap-alt" key={j}>
@@ -41,9 +43,16 @@ export function GreenerSwaps({ swaps }: { swaps: Swap[] }) {
 }
 
 function Score({ value, good }: { value: number; good?: boolean }) {
+  // `good` marks the higher-impact alternative (teal); the current merchant is muted.
+  // aria-label carries that distinction so it doesn't rest on color alone.
   const color = good ? COLORS.local : COLORS.muted;
+  const label = good ? "Alternative sustainability score" : "Current sustainability score";
   return (
-    <span className="score" style={{ color, borderColor: color }}>
+    <span
+      className="score"
+      style={{ color, borderColor: color }}
+      aria-label={`${label} ${value}`}
+    >
       {value}
     </span>
   );
