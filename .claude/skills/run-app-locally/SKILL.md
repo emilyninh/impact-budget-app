@@ -50,10 +50,9 @@ until [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/actuator
 docker compose ps            # all services Up; postgres/redis/redpanda healthy
 ```
 
-Sanity-check the API (empty until transactions are ingested — see step 6):
-```bash
-curl -s http://localhost:8080/api/dashboard/summary
-```
+Then open **http://localhost:8080** and sign in with the seeded demo account
+**`demo@impactbudget.app`** / **`demopass123`**. (API endpoints live under `/api/v1/**` and
+require a bearer JWT — the UI handles auth; Swagger is at `/swagger-ui/index.html`.)
 
 ## 4. (Optional) Start Ollama for real scoring
 
@@ -65,40 +64,44 @@ ollama serve                 # serves on :11434; the app reaches it via host.doc
 The container already points at `host.docker.internal:11434` (see `docker-compose.yml`).
 To use Claude instead: set `SCORING_PROVIDER=claude` and `ANTHROPIC_API_KEY` in `.env`.
 
-## 5. Start the frontend (React UI)
+## 5. The UI
+
+The React app is **bundled into the backend image** and served at **http://localhost:8080** —
+no separate step. For UI work with hot reload, optionally run the Vite dev server:
 
 ```bash
 cd frontend
 npm install                  # first time only
-npm run dev                  # serves http://localhost:5173 (proxies /api -> :8080)
+npm run dev                  # http://localhost:5173 (proxies /api -> :8080)
 ```
 
 ## URLs
 
-| Service          | URL                                   |
-| ---------------- | ------------------------------------- |
-| Frontend (UI)    | http://localhost:5173                 |
-| App / API        | http://localhost:8080                 |
-| Health           | http://localhost:8080/actuator/health |
-| Prometheus       | http://localhost:9090                 |
-| Grafana          | http://localhost:3000 (admin/admin)   |
-| Redpanda console | http://localhost:8085                 |
+| Service              | URL                                          |
+| -------------------- | -------------------------------------------- |
+| App + UI             | http://localhost:8080                        |
+| UI (dev, hot reload) | http://localhost:5173                        |
+| API docs (Swagger)   | http://localhost:8080/swagger-ui/index.html  |
+| Health               | http://localhost:8080/actuator/health        |
+| Prometheus           | http://localhost:9090                        |
+| Grafana              | http://localhost:3000 (admin/admin)          |
+| Redpanda console     | http://localhost:8085                        |
 
 ## 6. Data
 
-**Demo data is seeded by default for local runs** (`DEMO_SEED_ENABLED=true` in
-`docker-compose.yml`): on first boot the app publishes 25 sample transactions + 2 goals for
-`demo-user` through the real pipeline, so the dashboard is populated immediately. It's
-idempotent (won't duplicate on restart) and off in tests. Known brands score via
-curated/B-Corp/Wikidata; genuinely-local unknowns stay neutral unless Ollama is running
-(step 4) to identify them as independent.
+**Demo data is seeded by default** (`DEMO_SEED_ENABLED=true`): on first boot the app seeds the
+demo account (`demo@impactbudget.app`) with sample transactions + goals + a budget through the
+real pipeline, so the dashboard is populated immediately. Idempotent, and off in tests. Known
+brands score via curated/B-Corp/Wikidata; genuinely-local unknowns stay neutral unless Ollama
+is running (step 4) to identify them as independent.
 
-**To use real Plaid data instead:**
-1. Put `PLAID_CLIENT_ID` / `PLAID_SECRET` (free sandbox keys from dashboard.plaid.com) in `.env`.
-2. `DEMO_SEED_ENABLED=false` in `.env`, and `docker compose down -v && docker compose up -d`
-   for a clean slate (real transactions also land under `demo-user`).
-3. Drive the Link flow: `POST /api/plaid/link-token` → link in Plaid Link →
-   `POST /api/plaid/exchange` → the app syncs transactions through the same pipeline.
+**Bring in your own transactions** — both paths flow through the same scoring pipeline:
+
+- **CSV import:** `POST /api/v1/import/capital-one` (multipart `file`) — a Capital One export.
+- **Plaid:** click **Connect a bank** in the header. Add sandbox `PLAID_CLIENT_ID` /
+  `PLAID_SECRET` (from dashboard.plaid.com) to `.env` first, then restart the app. In sandbox
+  use the test values: username `user_good`, password `pass_good`, phone `(415) 555-0011`,
+  code `123456`. Transactions **auto-backfill** after linking; **Refresh** pulls new activity.
 
 ## Stop / clean up
 

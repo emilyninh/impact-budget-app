@@ -17,8 +17,17 @@ It's a financial mirror for your values.
 
 Run the whole stack locally with one command (see [Running locally](#running-locally)), then
 sign in with **`demo@impactbudget.app`** / **`demopass123`** (or hit "Explore the demo
-account") for a dashboard seeded with a few months of sample spending. A one-command Fly.io
-deploy is wired up in [DEPLOY.md](DEPLOY.md).
+account") for a dashboard seeded with a few months of sample spending. Deploy your own for
+free (single VM) or on Fly.io — see [Deploying](#deploying).
+
+<!-- Drop a dashboard screenshot + a demo GIF in docs/ and uncomment. The live SSE updating as
+     transactions score, and "Connect a bank → importing… → data appears", make the best GIFs.
+![Impact Budget dashboard](docs/dashboard.png)
+![Live updates as transactions score](docs/demo.gif)
+-->
+
+Two ingestion paths flow through the same impact-scoring pipeline: **upload a CSV** statement,
+or **connect a bank with Plaid** (sandbox) — see [Connecting a bank](#connecting-a-bank).
 
 <!-- Add a dashboard screenshot / GIF at docs/dashboard.png and uncomment:
 ![Impact Budget dashboard](docs/dashboard.png)
@@ -50,6 +59,28 @@ gets the most design attention (see [The impact‑scoring design](#the-impact-sc
 - **Real-time** — Server-Sent Events push live dashboard updates as the pipeline scores.
 - **Idempotent consumers** — unique keys + optimistic-race handling make at-least-once safe.
 - **Verifiable module boundaries** — Spring Modulith test fails the build on a cross-module leak.
+
+## Design decisions
+
+The *why* behind the notable choices:
+
+- **Modular monolith, not microservices.** One deployable with enforced internal boundaries
+  (Spring Modulith fails the build on a cross-module reach) that still communicates over a real
+  event bus. You get the event-driven design and its distributed-systems patterns without the
+  operational cost of running, versioning, and tracing N services — and it stays finishable.
+- **Transactional outbox over dual-write.** A DB commit and a Kafka publish can't be made atomic
+  across two systems; doing both directly loses events on a crash between them. Writing the event
+  to an outbox table *in the domain transaction*, then relaying it, makes "state changed ⇒ event
+  will publish" a guarantee. Consumers are idempotent, so at-least-once redelivery is safe.
+- **SSE over polling or WebSockets.** Dashboard updates are one-way (server→client), so SSE is
+  simpler than WebSockets and far cheaper than polling — and it rides the existing event pipeline
+  (a budget update fans out to the browser live).
+- **Redis as a rebuildable cache, not a source of truth.** Monthly aggregates are maintained
+  event-driven and cached; a cold or lost key rebuilds from Postgres, so Redis being down
+  degrades latency, never correctness.
+- **LLM behind a cache + curated ground truth.** Most spend repeats the same merchants, so a
+  normalized-merchant cache means the LLM is consulted once per merchant; a curated/B-Corp table
+  overrides it, keeping cost near zero and accuracy anchored.
 
 ## Architecture
 
