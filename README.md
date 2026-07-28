@@ -210,6 +210,16 @@ The suite has three layers:
 With **Colima**, point Testcontainers at its socket via `~/.testcontainers.properties`:
 `docker.host=unix:///<your-home>/.colima/docker.sock` (Docker Desktop / Linux CI need no config).
 
+Frontend: **Vitest + React Testing Library** (`cd frontend && npm test`) — component + util
+tests, run in CI alongside the build.
+
+## Performance
+
+A [k6](https://k6.io) load test of the dashboard read path at **30 concurrent users** —
+**6,845 requests, 0 failures, p95 ≈ 25 ms** (median 8.5 ms). Reads are served from the
+Redis-cached monthly aggregate, never recomputed on the hot path. Script + methodology:
+[`perf/load-test.js`](perf/load-test.js) · full writeup: **[PERF.md](PERF.md)**.
+
 ## The impact‑scoring design
 
 Merchant strings from banks are messy (`TST*SQ*LOCAL COFFEE 12345`). Scoring them is a
