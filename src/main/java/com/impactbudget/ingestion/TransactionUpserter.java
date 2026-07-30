@@ -48,6 +48,7 @@ class TransactionUpserter {
 
         PersonalFinanceCategory pfc = t.getPersonalFinanceCategory();
         e.setPlaidCategory(pfc != null ? pfc.getPrimary() : null);
+        e.setPlaidCategoryDetailed(pfc != null ? pfc.getDetailed() : null);
 
         Location loc = t.getLocation();
         if (loc != null) {
@@ -78,6 +79,8 @@ class TransactionUpserter {
                 e.getTxnDate(),
                 e.getLocationCity(),
                 e.getLocationRegion(),
-                e.getPlaidCategory());   // Plaid's category as a scoring hint
+                e.getPlaidCategory(),           // Plaid PFC primary — taxonomy hint
+                e.getPlaidCategoryDetailed(),    // Plaid PFC detailed — refines the taxonomy
+                e.getPlaidItem().getInstitutionName());  // source bank (in-txn: item is loaded)
     }
 }

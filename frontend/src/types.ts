@@ -40,6 +40,8 @@ export interface ScoredTransactionView {
   localScore: number;
   sustainabilityScore: number;
   localIndependent: boolean;
+  institutionName: string | null;
+  excludedFromSpend: boolean;
 }
 
 export interface CreateGoalRequest {

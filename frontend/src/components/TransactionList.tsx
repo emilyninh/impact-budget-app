@@ -1,27 +1,53 @@
 import type { ScoredTransactionView } from "../types";
 import { COLORS, formatUsd } from "../theme";
 
-export function TransactionList({ transactions }: { transactions: ScoredTransactionView[] }) {
+export function TransactionList({
+  transactions,
+  filterCategory = null,
+  onClearFilter,
+}: {
+  transactions: ScoredTransactionView[];
+  filterCategory?: string | null;
+  onClearFilter?: () => void;
+}) {
+  const rows = filterCategory
+    ? transactions.filter((t) => t.category === filterCategory)
+    : transactions;
+
   return (
     <section className="card">
-      <h2>Transactions</h2>
+      <div className="goal-head">
+        <h2 style={{ margin: 0 }}>Transactions</h2>
+        {filterCategory && (
+          <button type="button" className="filter-clear" onClick={onClearFilter}>
+            Showing: {filterCategory}
+            <span aria-hidden="true"> ✕</span>
+            <span className="sr-only"> — clear category filter</span>
+          </button>
+        )}
+      </div>
       {transactions.length === 0 && (
         <p className="muted">No scored transactions yet — link an account to get started.</p>
       )}
-      {transactions.length > 0 && (
+      {transactions.length > 0 && rows.length === 0 && (
+        <p className="muted">No {filterCategory} transactions this month.</p>
+      )}
+      {rows.length > 0 && (
         <p className="table-note muted">
           Every merchant is scored 0–100 on two axes — <strong>Local</strong>, how much of your
           money stayed with an independent business, and <strong>Sustainability</strong>, how
           sustainable the purchase is. The bar fills toward 100; higher is more. The{" "}
           <span className="pill">local</span> tag marks merchants confirmed as independent.
+          Transfers between your own accounts are shown but not scored or counted as spending.
         </p>
       )}
-      {transactions.length > 0 && (
+      {rows.length > 0 && (
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
                 <th scope="col">Merchant</th>
+                <th scope="col">Account</th>
                 <th scope="col">Category</th>
                 <th scope="col">Date</th>
                 <th scope="col" className="num">Amount</th>
@@ -30,11 +56,20 @@ export function TransactionList({ transactions }: { transactions: ScoredTransact
               </tr>
             </thead>
             <tbody>
-              {transactions.map((t, i) => (
-                <tr key={i}>
+              {rows.map((t, i) => (
+                <tr key={i} className={t.excludedFromSpend ? "txn-transfer" : undefined}>
                   <td className="merchant">
                     {t.merchantName ?? "Unknown"}
                     {t.localIndependent && <span className="pill">local</span>}
+                  </td>
+                  <td>
+                    {t.institutionName ? (
+                      t.institutionName
+                    ) : (
+                      <span className="muted" aria-label="unknown account">
+                        —
+                      </span>
+                    )}
                   </td>
                   <td>
                     {t.category ? (
@@ -47,16 +82,29 @@ export function TransactionList({ transactions }: { transactions: ScoredTransact
                   </td>
                   <td>{t.txnDate}</td>
                   <td className="num">{formatUsd(t.amount)}</td>
-                  <td className="num">
-                    <ScoreMeter value={t.localScore} dim={COLORS.local} label="Local" />
-                  </td>
-                  <td className="num">
-                    <ScoreMeter
-                      value={t.sustainabilityScore}
-                      dim={COLORS.sustainability}
-                      label="Sustainability"
-                    />
-                  </td>
+                  {t.excludedFromSpend ? (
+                    <>
+                      <td className="num">
+                        <span className="muted" aria-label="not scored — account transfer">—</span>
+                      </td>
+                      <td className="num">
+                        <span className="muted" aria-label="not scored — account transfer">—</span>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="num">
+                        <ScoreMeter value={t.localScore} dim={COLORS.local} label="Local" />
+                      </td>
+                      <td className="num">
+                        <ScoreMeter
+                          value={t.sustainabilityScore}
+                          dim={COLORS.sustainability}
+                          label="Sustainability"
+                        />
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>

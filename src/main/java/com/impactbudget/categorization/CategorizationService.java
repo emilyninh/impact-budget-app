@@ -34,6 +34,7 @@ public class CategorizationService {
     private final OpenFoodFactsEnricher openFoodFactsEnricher;
     private final WikidataLocalEnricher wikidataLocalEnricher;
     private final MerchantCategoryResolver categoryResolver;
+    private final PlaidPfcMapper pfcMapper;
     private final ScoringPersistence scoringPersistence;
     private final MeterRegistry meterRegistry;
 
@@ -43,6 +44,7 @@ public class CategorizationService {
                                  OpenFoodFactsEnricher openFoodFactsEnricher,
                                  WikidataLocalEnricher wikidataLocalEnricher,
                                  MerchantCategoryResolver categoryResolver,
+                                 PlaidPfcMapper pfcMapper,
                                  ScoringPersistence scoringPersistence,
                                  MeterRegistry meterRegistry) {
         this.merchantScoreRepository = merchantScoreRepository;
@@ -51,6 +53,7 @@ public class CategorizationService {
         this.openFoodFactsEnricher = openFoodFactsEnricher;
         this.wikidataLocalEnricher = wikidataLocalEnricher;
         this.categoryResolver = categoryResolver;
+        this.pfcMapper = pfcMapper;
         this.scoringPersistence = scoringPersistence;
         this.meterRegistry = meterRegistry;
     }
@@ -58,12 +61,33 @@ public class CategorizationService {
     public void categorize(TransactionIngested event) {
         String normalized = MerchantNormalizer.normalize(event.merchantRaw());
         MerchantScoring scoring = resolveMerchantScoring(normalized, event.merchantRaw(), event.sourceCategory());
+        String category = resolveCategory(event, scoring);
 
-        scoringPersistence.persist(event, scoring);
+        scoringPersistence.persist(event, scoring, category);
 
-        log.info("Scored txn {} [{}] local={} sustainability={} source={}",
-                event.transactionId(), normalized, scoring.localScore(),
+        log.info("Scored txn {} [{}] category={} local={} sustainability={} source={}",
+                event.transactionId(), normalized, category, scoring.localScore(),
                 scoring.sustainabilityScore(), scoring.source());
+    }
+
+    /**
+     * Final per-transaction category: Plaid's PFC (per-transaction, most accurate) wins; otherwise
+     * fall back to the merchant-resolved category (curated/keyword/LLM, which is merchant-cached).
+     * Category resolution lives here rather than in the merchant-score cache because PFC varies per
+     * transaction while the cache is keyed only by merchant.
+     */
+    private String resolveCategory(TransactionIngested event, MerchantScoring scoring) {
+        String fromPfc = pfcMapper.map(event.sourceCategory(), event.sourceCategoryDetailed());
+        if (fromPfc != null) {
+            return fromPfc;
+        }
+        // FOOD_AND_DRINK without Plaid's detailed split (historical): decide groceries vs eating out
+        // from the merchant name, keeping food as the floor.
+        if (PlaidPfcMapper.isFoodAndDrink(event.sourceCategory())) {
+            String display = scoring.cleanedMerchant() != null ? scoring.cleanedMerchant() : event.merchantName();
+            return categoryResolver.resolveFoodByMerchant(display);
+        }
+        return scoring.category();
     }
 
     /** Cache-first resolution: reuse a cached score, else LLM + curated override, then cache it. */

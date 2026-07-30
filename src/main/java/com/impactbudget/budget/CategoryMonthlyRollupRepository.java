@@ -32,4 +32,9 @@ public interface CategoryMonthlyRollupRepository
                     @Param("sustainabilityWeighted") BigDecimal sustainabilityWeighted);
 
     List<CategoryMonthlyRollup> findByUserIdAndYearMonthOrderByTotalSpendDesc(String userId, String yearMonth);
+
+    /** Wipe a user's rollups so they can be rebuilt from scratch (used by re-categorization). */
+    @Modifying
+    @Transactional
+    void deleteByUserId(String userId);
 }

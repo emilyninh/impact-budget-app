@@ -27,7 +27,7 @@ class OutboxWriterTest {
         UUID txnId = UUID.randomUUID();
         TransactionScored event = new TransactionScored(
                 txnId, "user-1", "Local Coffee", new BigDecimal("4.50"), LocalDate.of(2026, 7, 1),
-                "Eating Out", 85, true, 60, List.of(), 0.7, "LLM");
+                "Eating Out", 85, true, 60, List.of(), 0.7, "LLM", "Chase");
 
         writer.enqueue("transactions.scored", "user-1", event);
 

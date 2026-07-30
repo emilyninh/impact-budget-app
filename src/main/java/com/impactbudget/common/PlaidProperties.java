@@ -10,6 +10,7 @@ public record PlaidProperties(
         String clientId,
         String secret,
         String environment,   // sandbox | production
-        String webhookUrl
+        String webhookUrl,
+        String redirectUri    // OAuth return URL; must exactly match a Dashboard-registered URI
 ) {
 }

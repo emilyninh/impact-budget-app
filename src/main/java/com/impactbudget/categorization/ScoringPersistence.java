@@ -26,16 +26,16 @@ class ScoringPersistence {
     }
 
     @Transactional
-    void persist(TransactionIngested event, MerchantScoring scoring) {
-        saveImpactScore(event, scoring);
+    void persist(TransactionIngested event, MerchantScoring scoring, String category) {
+        saveImpactScore(event, scoring, category);
         publisher.publishScored(new TransactionScored(
                 event.transactionId(), event.userId(), displayMerchant(scoring, event), event.amount(),
-                event.txnDate(), scoring.category(), scoring.localScore(), scoring.localIndependent(),
+                event.txnDate(), category, scoring.localScore(), scoring.localIndependent(),
                 scoring.sustainabilityScore(), scoring.materialFlags(),
-                scoring.confidence(), scoring.source()));
+                scoring.confidence(), scoring.source(), event.institutionName()));
     }
 
-    private void saveImpactScore(TransactionIngested event, MerchantScoring s) {
+    private void saveImpactScore(TransactionIngested event, MerchantScoring s, String category) {
         ImpactScore score = impactScoreRepository.findByTransactionId(event.transactionId())
                 .orElseGet(ImpactScore::new);
         if (score.getId() == null) {
@@ -43,7 +43,7 @@ class ScoringPersistence {
             score.setTransactionId(event.transactionId());
         }
         score.setUserId(event.userId());
-        score.setCategory(s.category());
+        score.setCategory(category);
         score.setLocalScore(s.localScore());
         score.setLocalIndependent(s.localIndependent());
         score.setSustainabilityScore(s.sustainabilityScore());

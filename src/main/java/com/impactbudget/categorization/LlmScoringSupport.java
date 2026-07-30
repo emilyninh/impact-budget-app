@@ -21,7 +21,7 @@ public class LlmScoringSupport {
             Respond with ONLY a JSON object (no prose, no markdown fences) matching exactly:
             {
               "cleanedMerchant": string,
-              "category": string,                    // exactly one of: Eating Out, Groceries, Shopping, Subscriptions, Transport, Other
+              "category": string,                    // exactly one of: Eating Out, Groceries, Shopping, Subscriptions, Transport, Travel, Housing & Rent, Bills & Utilities, Health, Entertainment, Transfers, Income, Other
               "localScore": integer 0-100,          // 0 = multinational conglomerate, 100 = local independently-owned
               "localIndependent": boolean,
               "sustainabilityScore": integer 0-100,  // 0 = high-footprint / fast fashion / synthetic, 100 = B-Corp / organic / natural fiber / plant-based

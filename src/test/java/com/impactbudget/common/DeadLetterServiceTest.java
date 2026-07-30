@@ -40,7 +40,7 @@ class DeadLetterServiceTest {
 
     private TransactionScored event() {
         return new TransactionScored(UUID.randomUUID(), "user-1", "Store", new BigDecimal("10.00"),
-                LocalDate.of(2026, 7, 1), "Shopping", 40, false, 50, List.of(), 0.5, "LLM");
+                LocalDate.of(2026, 7, 1), "Shopping", 40, false, 50, List.of(), 0.5, "LLM", "Chase");
     }
 
     @Test

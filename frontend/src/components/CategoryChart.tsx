@@ -22,7 +22,15 @@ const PALETTE_VARS = [
   "--chart-6",
 ];
 
-export function CategoryChart({ categories }: { categories: CategoryBreakdown[] }) {
+export function CategoryChart({
+  categories,
+  selectedCategory = null,
+  onSelect,
+}: {
+  categories: CategoryBreakdown[];
+  selectedCategory?: string | null;
+  onSelect?: (category: string | null) => void;
+}) {
   if (categories.length === 0) {
     return null;
   }
@@ -38,9 +46,37 @@ export function CategoryChart({ categories }: { categories: CategoryBreakdown[] 
     .map((d) => `${d.category}, ${formatUsd(d.spend)}`)
     .join("; ")}.`;
 
+  const selected = categories.find((c) => c.category === selectedCategory) ?? null;
+  const toggle = (category: string) =>
+    onSelect?.(category === selectedCategory ? null : category);
+
   return (
     <section className="card">
-      <h2>Where your money goes</h2>
+      <div className="goal-head">
+        <h2 style={{ margin: 0 }}>Where your money goes</h2>
+        {selected && (
+          <span className="muted" aria-live="polite">
+            {formatUsd(selected.totalSpend)} in {selected.category} · {selected.txnCount}{" "}
+            {selected.txnCount === 1 ? "transaction" : "transactions"}
+          </span>
+        )}
+      </div>
+
+      {/* Selectable category chips — the accessible control; clicking a bar does the same. */}
+      <div className="filter-chips" role="group" aria-label="Filter by category">
+        {data.map((d) => (
+          <button
+            key={d.category}
+            type="button"
+            className={`filter-chip${d.category === selectedCategory ? " is-selected" : ""}`}
+            aria-pressed={d.category === selectedCategory}
+            onClick={() => toggle(d.category)}
+          >
+            {d.category}
+          </button>
+        ))}
+      </div>
+
       <div style={{ width: "100%", height: 280 }} role="img" aria-label={summary}>
         <ResponsiveContainer>
           <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
@@ -53,9 +89,15 @@ export function CategoryChart({ categories }: { categories: CategoryBreakdown[] 
               }
               labelFormatter={(label: string) => label}
             />
-            <Bar dataKey="spend" radius={[6, 6, 0, 0]}>
-              {data.map((_, i) => (
-                <Cell key={i} fill={palette[i % palette.length]} />
+            <Bar dataKey="spend" radius={[6, 6, 0, 0]} onClick={(d: { category: string }) => toggle(d.category)}>
+              {data.map((d, i) => (
+                <Cell
+                  key={i}
+                  fill={palette[i % palette.length]}
+                  // Dim the unselected bars so the chosen category stands out; no selection = all lit.
+                  fillOpacity={selectedCategory && d.category !== selectedCategory ? 0.25 : 1}
+                  cursor="pointer"
+                />
               ))}
             </Bar>
           </BarChart>

@@ -46,6 +46,9 @@ plaid:
   environment: ${PLAID_ENV:sandbox}          # sandbox | production
   # Public base URL Plaid can reach for webhooks (e.g. an ngrok tunnel in dev)
   webhook-url: ${PLAID_WEBHOOK_URL:}
+  # OAuth return URL for banks like Chase/Capital One; must match a Dashboard-registered
+  # redirect URI exactly (e.g. http://localhost:5173/ in local dev). Leave blank for sandbox.
+  redirect-uri: ${PLAID_REDIRECT_URI:}
 
 anthropic:
   api-key: ${ANTHROPIC_API_KEY:}

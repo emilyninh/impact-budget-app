@@ -44,13 +44,15 @@ class CategorizationServiceTest {
     void setUp() {
         service = new CategorizationService(merchantScoreRepository, curatedOverrideService,
                 scoringClient, openFoodFactsEnricher, wikidataLocalEnricher,
-                new MerchantCategoryResolver(), scoringPersistence, new SimpleMeterRegistry());
+                new MerchantCategoryResolver(), new PlaidPfcMapper(), scoringPersistence,
+                new SimpleMeterRegistry());
     }
 
     private TransactionIngested event() {
         return new TransactionIngested(
                 UUID.randomUUID(), "user-1", "TST*SQ*LOCAL COFFEE 12345", "Local Coffee",
-                new BigDecimal("4.50"), "USD", LocalDate.of(2026, 7, 1), "Portland", "OR", null);
+                new BigDecimal("4.50"), "USD", LocalDate.of(2026, 7, 1), "Portland", "OR",
+                null, null, "Chase");
     }
 
     @Test
@@ -72,11 +74,13 @@ class CategorizationServiceTest {
         // Persistence + outbox enqueue happen atomically in the collaborator.
         ArgumentCaptor<TransactionIngested> evt = ArgumentCaptor.forClass(TransactionIngested.class);
         ArgumentCaptor<MerchantScoring> scoring = ArgumentCaptor.forClass(MerchantScoring.class);
-        verify(scoringPersistence).persist(evt.capture(), scoring.capture());
+        ArgumentCaptor<String> category = ArgumentCaptor.forClass(String.class);
+        verify(scoringPersistence).persist(evt.capture(), scoring.capture(), category.capture());
         assertThat(scoring.getValue().localScore()).isEqualTo(85);
         assertThat(evt.getValue().amount()).isEqualByComparingTo("4.50");
-        // Free-text LLM category "Coffee" is normalized onto the fixed taxonomy.
-        assertThat(scoring.getValue().category()).isEqualTo("Eating Out");
+        // No Plaid PFC on this event, so the final category falls back to the merchant scoring —
+        // free-text LLM category "Coffee" normalized onto the fixed taxonomy.
+        assertThat(category.getValue()).isEqualTo("Eating Out");
     }
 
     @Test
@@ -98,6 +102,6 @@ class CategorizationServiceTest {
         // The whole point of the cache: a repeat merchant never hits the scorer again.
         verify(scoringClient, never()).score(anyString(), anyString());
         verify(merchantScoreRepository, never()).save(any());
-        verify(scoringPersistence).persist(any(), any());
+        verify(scoringPersistence).persist(any(), any(), any());
     }
 }

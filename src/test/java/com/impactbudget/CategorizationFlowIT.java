@@ -81,7 +81,8 @@ class CategorizationFlowIT {
         // Act: publish the event the ingestion module would have emitted.
         TransactionIngested event = new TransactionIngested(
                 txnId, "it-user", "TST*LOCAL CAFE 99", "Local Cafe",
-                new BigDecimal("12.00"), "USD", LocalDate.now(), "Portland", "OR", "Dining");
+                new BigDecimal("12.00"), "USD", LocalDate.now(), "Portland", "OR",
+                "Dining", null, "Chase");
         kafka.send(topics.topics().transactionsIngested(), event.userId(), event);
 
         // Assert: both consumers processed it.
