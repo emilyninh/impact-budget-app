@@ -46,8 +46,8 @@ class CategorizationServiceTest {
     void setUp() {
         service = new CategorizationService(merchantScoreRepository, curatedOverrideService,
                 scoringClient, openFoodFactsEnricher, wikidataLocalEnricher,
-                new MerchantCategoryResolver(), new PlaidPfcMapper(), websiteSignalEnricher,
-                scoringPersistence, new SimpleMeterRegistry());
+                new MerchantCategoryResolver(), new PlaidPfcMapper(), new CategoryPriors(),
+                websiteSignalEnricher, scoringPersistence, new SimpleMeterRegistry());
     }
 
     private TransactionIngested event() {

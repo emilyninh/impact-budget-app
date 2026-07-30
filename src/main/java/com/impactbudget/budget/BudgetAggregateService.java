@@ -29,6 +29,9 @@ public class BudgetAggregateService {
 
     private static final Logger log = LoggerFactory.getLogger(BudgetAggregateService.class);
     private static final Duration CACHE_TTL = Duration.ofHours(1);
+    /** Min confidence for spend to count as "scored" coverage — LLM (0.5) and grounded sources; a
+     *  flat fallback (0.2) or category prior (0.35) is a guess, not scored. */
+    private static final double COVERAGE_FLOOR = 0.5;
 
     private final ScoredTransactionRepository repository;
     private final CategoryMonthlyRollupRepository categoryRollupRepository;
@@ -76,6 +79,7 @@ public class BudgetAggregateService {
         st.setLocalScore(event.localScore());
         st.setSustainabilityScore(event.sustainabilityScore());
         st.setLocalIndependent(event.localIndependent());
+        st.setConfidence(event.confidence());
         st.setInstitutionName(event.institutionName());
         st.setExcludedFromSpend(excluded);
 
@@ -148,9 +152,11 @@ public class BudgetAggregateService {
         List<ScoredTransaction> rows = repository.findByUserIdAndYearMonth(userId, yearMonth);
 
         BigDecimal total = BigDecimal.ZERO;
-        BigDecimal localWeighted = BigDecimal.ZERO;        // sum(amount * localScore)
+        BigDecimal confWeight = BigDecimal.ZERO;           // sum(amount * confidence)
+        BigDecimal localWeighted = BigDecimal.ZERO;        // sum(amount * confidence * localScore)
         BigDecimal sustainabilityWeighted = BigDecimal.ZERO;
         BigDecimal localIndependentSpend = BigDecimal.ZERO;
+        BigDecimal scoredSpend = BigDecimal.ZERO;          // spend we're actually confident about
         int spendCount = 0;
 
         for (ScoredTransaction st : rows) {
@@ -158,19 +164,29 @@ public class BudgetAggregateService {
                 continue;   // transfers are shown in the ledger but never counted as spend
             }
             BigDecimal amount = st.getAmount();
+            // Weight each transaction by confidence so a grounded score counts fully and a guess
+            // (neutral fallback / category prior) barely moves the average.
+            BigDecimal weight = amount.multiply(BigDecimal.valueOf(st.getConfidence()));
             total = total.add(amount);
-            localWeighted = localWeighted.add(amount.multiply(BigDecimal.valueOf(st.getLocalScore())));
+            confWeight = confWeight.add(weight);
+            localWeighted = localWeighted.add(weight.multiply(BigDecimal.valueOf(st.getLocalScore())));
             sustainabilityWeighted =
-                    sustainabilityWeighted.add(amount.multiply(BigDecimal.valueOf(st.getSustainabilityScore())));
+                    sustainabilityWeighted.add(weight.multiply(BigDecimal.valueOf(st.getSustainabilityScore())));
             if (st.isLocalIndependent()) {
                 localIndependentSpend = localIndependentSpend.add(amount);
+            }
+            if (st.getConfidence() >= COVERAGE_FLOOR) {
+                scoredSpend = scoredSpend.add(amount);
             }
             spendCount++;
         }
 
-        // localImpactPct = sum(amount*score/100)/total*100 = sum(amount*score)/total.
-        double localPct = pct(localWeighted, total);
-        double sustainabilityPct = pct(sustainabilityWeighted, total);
+        // Confidence-weighted average score = sum(amount*conf*score) / sum(amount*conf).
+        double localPct = pct(localWeighted, confWeight);
+        double sustainabilityPct = pct(sustainabilityWeighted, confWeight);
+        // Coverage = share of spend scored above the confidence floor (0–100).
+        double scoredSharePct = total.signum() <= 0 ? 0.0
+                : Math.round(scoredSpend.divide(total, 4, RoundingMode.HALF_UP).doubleValue() * 1000.0) / 10.0;
 
         return new BudgetAggregate(
                 userId,
@@ -179,7 +195,8 @@ public class BudgetAggregateService {
                 localPct,
                 sustainabilityPct,
                 localIndependentSpend.setScale(2, RoundingMode.HALF_UP),
-                spendCount);
+                spendCount,
+                scoredSharePct);
     }
 
     private double pct(BigDecimal weighted, BigDecimal total) {

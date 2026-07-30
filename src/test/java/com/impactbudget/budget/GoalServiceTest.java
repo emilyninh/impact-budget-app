@@ -44,7 +44,7 @@ class GoalServiceTest {
         when(aggregateService.getMonthly(anyString(), anyString())).thenReturn(new BudgetAggregate(
                 "user-1", "2026-07", new BigDecimal("500.00"),
                 24.0,   // current local impact %
-                55.0, new BigDecimal("120.00"), 10));
+                55.0, new BigDecimal("120.00"), 10, 100.0));
 
         List<GoalProgress> progress = service.progress("user-1");
 
@@ -62,7 +62,7 @@ class GoalServiceTest {
         when(goalRepository.findByUserId("user-1")).thenReturn(List.of(goal));
         when(aggregateService.getMonthly(anyString(), anyString())).thenReturn(new BudgetAggregate(
                 "user-1", "2026-07", new BigDecimal("500.00"),
-                32.0, 55.0, new BigDecimal("160.00"), 10));
+                32.0, 55.0, new BigDecimal("160.00"), 10, 100.0));
 
         GoalProgress p = service.progress("user-1").get(0);
 

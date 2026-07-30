@@ -53,6 +53,10 @@ public class ScoredTransaction {
     @Column(name = "local_independent", nullable = false)
     private boolean localIndependent;
 
+    /** Scoring confidence 0–1 (grounded sources high, neutral fallback low) for weighted aggregates. */
+    @Column(name = "confidence", nullable = false)
+    private double confidence;
+
     /** Source institution (e.g. "Chase", "Capital One"), so the ledger can show the account. */
     @Column(name = "institution_name")
     private String institutionName;
@@ -151,6 +155,14 @@ public class ScoredTransaction {
 
     public void setLocalIndependent(boolean localIndependent) {
         this.localIndependent = localIndependent;
+    }
+
+    public double getConfidence() {
+        return confidence;
+    }
+
+    public void setConfidence(double confidence) {
+        this.confidence = confidence;
     }
 
     public String getInstitutionName() {

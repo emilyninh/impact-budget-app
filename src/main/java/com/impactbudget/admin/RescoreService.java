@@ -61,17 +61,19 @@ public class RescoreService {
             // Re-score this merchant once (does the web fetch); reuse for its other transactions.
             String key = MerchantNormalizer.normalize(bt.getMerchantRaw());
             MerchantScoring s = byMerchant.computeIfAbsent(key, k -> categorizationService.rescoreMerchant(
-                    bt.getMerchantRaw(), bt.getMerchantWebsite(), bt.getMerchantName()));
+                    bt.getMerchantRaw(), bt.getPlaidCategory(), bt.getMerchantWebsite(), bt.getMerchantName()));
 
             st.setLocalScore(s.localScore());
             st.setSustainabilityScore(s.sustainabilityScore());
             st.setLocalIndependent(s.localIndependent());
+            st.setConfidence(s.confidence());
             scoredRepository.save(st);
 
             impactScoreRepository.findByTransactionId(st.getTransactionId()).ifPresent(is -> {
                 is.setLocalScore(s.localScore());
                 is.setSustainabilityScore(s.sustainabilityScore());
                 is.setLocalIndependent(s.localIndependent());
+                is.setConfidence(s.confidence());
                 is.setMaterialFlags(s.materialFlags().isEmpty() ? null : String.join(",", s.materialFlags()));
                 impactScoreRepository.save(is);
             });

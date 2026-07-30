@@ -17,6 +17,7 @@ export interface BudgetAggregate {
   sustainabilityImpactPct: number;
   localIndependentSpend: number;
   transactionCount: number;
+  scoredSharePct: number;
 }
 
 export type Dimension = "LOCAL" | "SUSTAINABLE";

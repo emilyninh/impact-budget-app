@@ -45,6 +45,11 @@ class BudgetAggregateServiceTest {
     }
 
     private ScoredTransaction row(String amount, int local, int sustainability, boolean independent) {
+        return row(amount, local, sustainability, independent, 1.0);
+    }
+
+    private ScoredTransaction row(String amount, int local, int sustainability, boolean independent,
+                                  double confidence) {
         ScoredTransaction st = new ScoredTransaction();
         st.setId(UUID.randomUUID());
         st.setTransactionId(UUID.randomUUID());
@@ -54,6 +59,7 @@ class BudgetAggregateServiceTest {
         st.setLocalScore(local);
         st.setSustainabilityScore(sustainability);
         st.setLocalIndependent(independent);
+        st.setConfidence(confidence);
         return st;
     }
 
@@ -113,6 +119,24 @@ class BudgetAggregateServiceTest {
         verify(categoryRollupRepository, never()).accumulate(
                 anyString(), anyString(), anyString(),
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void confidenceWeightsGroundedScoresOverGuessesAndReportsCoverage() {
+        when(redis.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get(anyString())).thenReturn(null);
+        // $100 grounded (conf 0.9, sustainability 90) + $100 guessed (conf 0.2, sustainability 50).
+        when(repository.findByUserIdAndYearMonth("user-1", "2026-07")).thenReturn(List.of(
+                row("100.00", 80, 90, true, 0.9),
+                row("100.00", 40, 50, false, 0.2)));
+
+        BudgetAggregate agg = service.getMonthly("user-1", "2026-07");
+
+        // Plain mean would be 70; confidence-weighted = (100*.9*90 + 100*.2*50)/(100*.9 + 100*.2)
+        // = (8100 + 1000) / 110 = 82.7 — pulled toward the grounded score.
+        assertThat(agg.sustainabilityImpactPct()).isEqualTo(82.7);
+        // Only the grounded $100 clears the confidence floor → 50% of spend is "scored".
+        assertThat(agg.scoredSharePct()).isEqualTo(50.0);
     }
 
     @Test
