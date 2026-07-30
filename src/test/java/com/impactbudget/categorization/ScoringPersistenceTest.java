@@ -30,7 +30,7 @@ class ScoringPersistenceTest {
     private TransactionIngested event(UUID txnId) {
         return new TransactionIngested(txnId, "user-1", "TST*LOCAL COFFEE", "Local Coffee",
                 new BigDecimal("4.50"), "USD", LocalDate.of(2026, 7, 1), "Portland", "OR",
-                null, null, "Chase");
+                null, null, "Chase", null);
     }
 
     @Test

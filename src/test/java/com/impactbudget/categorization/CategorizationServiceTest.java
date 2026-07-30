@@ -36,6 +36,8 @@ class CategorizationServiceTest {
     @Mock
     WikidataLocalEnricher wikidataLocalEnricher;
     @Mock
+    WebsiteSignalEnricher websiteSignalEnricher;
+    @Mock
     ScoringPersistence scoringPersistence;
 
     CategorizationService service;
@@ -44,15 +46,15 @@ class CategorizationServiceTest {
     void setUp() {
         service = new CategorizationService(merchantScoreRepository, curatedOverrideService,
                 scoringClient, openFoodFactsEnricher, wikidataLocalEnricher,
-                new MerchantCategoryResolver(), new PlaidPfcMapper(), scoringPersistence,
-                new SimpleMeterRegistry());
+                new MerchantCategoryResolver(), new PlaidPfcMapper(), websiteSignalEnricher,
+                scoringPersistence, new SimpleMeterRegistry());
     }
 
     private TransactionIngested event() {
         return new TransactionIngested(
                 UUID.randomUUID(), "user-1", "TST*SQ*LOCAL COFFEE 12345", "Local Coffee",
                 new BigDecimal("4.50"), "USD", LocalDate.of(2026, 7, 1), "Portland", "OR",
-                null, null, "Chase");
+                null, null, "Chase", null);
     }
 
     @Test
@@ -64,6 +66,7 @@ class CategorizationServiceTest {
         // Enrichers pass the scoring through unchanged for this test.
         when(openFoodFactsEnricher.enrich(anyString(), any())).thenAnswer(inv -> inv.getArgument(1));
         when(wikidataLocalEnricher.enrich(anyString(), any())).thenAnswer(inv -> inv.getArgument(1));
+        when(websiteSignalEnricher.enrich(any(), any(), any(), any())).thenAnswer(inv -> inv.getArgument(3));
         when(curatedOverrideService.apply(anyString(), any())).thenReturn(base);
 
         service.categorize(event());

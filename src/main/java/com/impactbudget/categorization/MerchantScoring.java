@@ -27,4 +27,5 @@ public record MerchantScoring(
     public static final String SOURCE_CACHE = "CACHE";
     public static final String SOURCE_OPENFOODFACTS = "OFF";
     public static final String SOURCE_WIKIDATA = "WIKI";
+    public static final String SOURCE_WEB = "WEB";
 }

@@ -82,6 +82,13 @@ wikidata:
   enabled: ${WIKIDATA_ENABLED:true}
   base-url: ${WIKIDATA_BASE_URL:https://www.wikidata.org}
 
+# Website-signal enrichment: fetches a small merchant's own site and detects sustainability
+# certifications (GOTS, organic, B Corp, …) to lift an otherwise-neutral score. Free, no API key.
+web-signal:
+  enabled: ${WEB_SIGNAL_ENABLED:true}
+  timeout-ms: ${WEB_SIGNAL_TIMEOUT_MS:4000}
+  max-pages: ${WEB_SIGNAL_MAX_PAGES:5}
+
 # App-specific topic names, referenced from producers/consumers
 app:
   kafka:

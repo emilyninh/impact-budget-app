@@ -35,6 +35,7 @@ public class CategorizationService {
     private final WikidataLocalEnricher wikidataLocalEnricher;
     private final MerchantCategoryResolver categoryResolver;
     private final PlaidPfcMapper pfcMapper;
+    private final WebsiteSignalEnricher websiteSignalEnricher;
     private final ScoringPersistence scoringPersistence;
     private final MeterRegistry meterRegistry;
 
@@ -45,6 +46,7 @@ public class CategorizationService {
                                  WikidataLocalEnricher wikidataLocalEnricher,
                                  MerchantCategoryResolver categoryResolver,
                                  PlaidPfcMapper pfcMapper,
+                                 WebsiteSignalEnricher websiteSignalEnricher,
                                  ScoringPersistence scoringPersistence,
                                  MeterRegistry meterRegistry) {
         this.merchantScoreRepository = merchantScoreRepository;
@@ -54,13 +56,16 @@ public class CategorizationService {
         this.wikidataLocalEnricher = wikidataLocalEnricher;
         this.categoryResolver = categoryResolver;
         this.pfcMapper = pfcMapper;
+        this.websiteSignalEnricher = websiteSignalEnricher;
         this.scoringPersistence = scoringPersistence;
         this.meterRegistry = meterRegistry;
     }
 
     public void categorize(TransactionIngested event) {
         String normalized = MerchantNormalizer.normalize(event.merchantRaw());
-        MerchantScoring scoring = resolveMerchantScoring(normalized, event.merchantRaw(), event.sourceCategory());
+        MerchantScoring scoring = resolveMerchantScoring(
+                normalized, event.merchantRaw(), event.sourceCategory(),
+                event.merchantWebsite(), event.merchantName());
         String category = resolveCategory(event, scoring);
 
         scoringPersistence.persist(event, scoring, category);
@@ -90,8 +95,23 @@ public class CategorizationService {
         return scoring.category();
     }
 
+    /**
+     * Re-run the full scoring chain for one merchant, discarding and refreshing its cache entry.
+     * Used by the admin re-score to apply improved scoring (e.g. new website signals) to
+     * already-loaded transactions. Returns the fresh scoring.
+     */
+    public MerchantScoring rescoreMerchant(String rawMerchant, String website, String merchantName) {
+        String normalized = MerchantNormalizer.normalize(rawMerchant);
+        merchantScoreRepository.findByNormalizedMerchant(normalized)
+                .ifPresent(merchantScoreRepository::delete);
+        String name = merchantName != null ? merchantName : rawMerchant;
+        return resolveMerchantScoring(normalized, rawMerchant, null, website, name);
+    }
+
     /** Cache-first resolution: reuse a cached score, else LLM + curated override, then cache it. */
-    private MerchantScoring resolveMerchantScoring(String normalized, String rawMerchant, String sourceCategory) {
+    private MerchantScoring resolveMerchantScoring(String normalized, String rawMerchant,
+                                                   String sourceCategory, String merchantWebsite,
+                                                   String merchantName) {
         return merchantScoreRepository.findByNormalizedMerchant(normalized)
                 .map(entity -> {
                     meterRegistry.counter("categorization.cache", "result", "hit").increment();
@@ -100,12 +120,15 @@ public class CategorizationService {
                 .orElseGet(() -> {
                     meterRegistry.counter("categorization.cache", "result", "miss").increment();
                     // base scorer → Open Food Facts (sustainability) → Wikidata (local) →
-                    // curated override (final authority, wins on conflict).
+                    // website signals (small-brand certifications) → curated (final authority).
                     MerchantScoring base = scoringClient.score(normalized, rawMerchant);
                     String display = base.cleanedMerchant() != null ? base.cleanedMerchant() : rawMerchant;
                     MerchantScoring withEco = openFoodFactsEnricher.enrich(display, base);
                     MerchantScoring withLocal = wikidataLocalEnricher.enrich(normalized, withEco);
-                    MerchantScoring overridden = curatedOverrideService.apply(normalized, withLocal);
+                    String name = merchantName != null ? merchantName : display;
+                    MerchantScoring withWeb =
+                            websiteSignalEnricher.enrich(merchantWebsite, rawMerchant, name, withLocal);
+                    MerchantScoring overridden = curatedOverrideService.apply(normalized, withWeb);
                     // Normalize the category onto the fixed taxonomy, falling back to the bank's
                     // own category as a hint when no scorer supplied one (e.g. imported data).
                     MerchantScoring resolved = withCategory(overridden, display, sourceCategory);
