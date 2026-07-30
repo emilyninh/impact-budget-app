@@ -53,6 +53,18 @@ public class ScoredTransaction {
     @Column(name = "local_independent", nullable = false)
     private boolean localIndependent;
 
+    /** Scoring confidence 0–1 (grounded sources high, neutral fallback low) for weighted aggregates. */
+    @Column(name = "confidence", nullable = false)
+    private double confidence;
+
+    /** Source institution (e.g. "Chase", "Capital One"), so the ledger can show the account. */
+    @Column(name = "institution_name")
+    private String institutionName;
+
+    /** True for account-to-account transfers: shown in the ledger but excluded from spend math. */
+    @Column(name = "excluded_from_spend", nullable = false)
+    private boolean excludedFromSpend;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -143,6 +155,30 @@ public class ScoredTransaction {
 
     public void setLocalIndependent(boolean localIndependent) {
         this.localIndependent = localIndependent;
+    }
+
+    public double getConfidence() {
+        return confidence;
+    }
+
+    public void setConfidence(double confidence) {
+        this.confidence = confidence;
+    }
+
+    public String getInstitutionName() {
+        return institutionName;
+    }
+
+    public void setInstitutionName(String institutionName) {
+        this.institutionName = institutionName;
+    }
+
+    public boolean isExcludedFromSpend() {
+        return excludedFromSpend;
+    }
+
+    public void setExcludedFromSpend(boolean excludedFromSpend) {
+        this.excludedFromSpend = excludedFromSpend;
     }
 
     public Instant getCreatedAt() {

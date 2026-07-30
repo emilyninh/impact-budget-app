@@ -29,7 +29,8 @@ class ScoringPersistenceTest {
 
     private TransactionIngested event(UUID txnId) {
         return new TransactionIngested(txnId, "user-1", "TST*LOCAL COFFEE", "Local Coffee",
-                new BigDecimal("4.50"), "USD", LocalDate.of(2026, 7, 1), "Portland", "OR", null);
+                new BigDecimal("4.50"), "USD", LocalDate.of(2026, 7, 1), "Portland", "OR",
+                null, null, "Chase", null);
     }
 
     @Test
@@ -40,7 +41,7 @@ class ScoringPersistenceTest {
         MerchantScoring scoring = new MerchantScoring("Local Coffee", "Eating Out", 85, true, 60,
                 List.of("organic"), 0.7, "independent", MerchantScoring.SOURCE_LLM);
 
-        persistence.persist(event(txnId), scoring);
+        persistence.persist(event(txnId), scoring, "Eating Out");
 
         ArgumentCaptor<ImpactScore> score = ArgumentCaptor.forClass(ImpactScore.class);
         verify(impactScoreRepository).save(score.capture());
@@ -54,6 +55,7 @@ class ScoringPersistenceTest {
         assertThat(event.getValue().merchantName()).isEqualTo("Local Coffee");
         assertThat(event.getValue().category()).isEqualTo("Eating Out");
         assertThat(event.getValue().amount()).isEqualByComparingTo("4.50");
+        assertThat(event.getValue().institutionName()).isEqualTo("Chase");
     }
 
     @Test
@@ -67,7 +69,7 @@ class ScoringPersistenceTest {
         MerchantScoring scoring = new MerchantScoring("Local Coffee", "Eating Out", 85, true, 60,
                 List.of(), 0.7, "independent", MerchantScoring.SOURCE_LLM);
 
-        persistence.persist(event(txnId), scoring);
+        persistence.persist(event(txnId), scoring, "Eating Out");
 
         ArgumentCaptor<ImpactScore> score = ArgumentCaptor.forClass(ImpactScore.class);
         verify(impactScoreRepository).save(score.capture());

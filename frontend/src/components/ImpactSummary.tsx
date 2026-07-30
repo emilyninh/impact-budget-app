@@ -12,13 +12,13 @@ export function ImpactSummary({ summary }: { summary: BudgetAggregate }) {
           label="Local impact"
           value={`${summary.localImpactPct.toFixed(1)}%`}
           color={COLORS.local}
-          hint="spend-weighted local score"
+          hint="confidence-weighted local score"
         />
         <Stat
           label="Sustainability"
           value={`${summary.sustainabilityImpactPct.toFixed(1)}%`}
           color={COLORS.sustainability}
-          hint="spend-weighted sustainability score"
+          hint="confidence-weighted sustainability score"
         />
         <Stat
           label="Total spend"
@@ -33,6 +33,11 @@ export function ImpactSummary({ summary }: { summary: BudgetAggregate }) {
           hint="dollars to independent businesses"
         />
       </div>
+      <p className="table-note muted" style={{ margin: "12px 0 0" }}>
+        The two impact figures are weighted by how confident each merchant's score is, based on{" "}
+        {summary.scoredSharePct.toFixed(0)}% of spend we could score from grounded data; the rest is
+        an unverified estimate.
+      </p>
     </section>
   );
 }

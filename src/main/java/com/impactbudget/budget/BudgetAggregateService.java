@@ -29,6 +29,9 @@ public class BudgetAggregateService {
 
     private static final Logger log = LoggerFactory.getLogger(BudgetAggregateService.class);
     private static final Duration CACHE_TTL = Duration.ofHours(1);
+    /** Min confidence for spend to count as "scored" coverage — LLM (0.5) and grounded sources; a
+     *  flat fallback (0.2) or category prior (0.35) is a guess, not scored. */
+    private static final double COVERAGE_FLOOR = 0.5;
 
     private final ScoredTransactionRepository repository;
     private final CategoryMonthlyRollupRepository categoryRollupRepository;
@@ -58,6 +61,11 @@ public class BudgetAggregateService {
             return; // idempotent on re-delivery
         }
 
+        // Account-to-account transfers are stored (so the ledger shows them) but excluded from all
+        // spend math — moving your own money isn't spending. They never reach the budget total,
+        // the impact percentages, or the category breakdown.
+        boolean excluded = "Transfers".equals(event.category());
+
         String yearMonth = YearMonth.from(event.txnDate()).toString();
         ScoredTransaction st = new ScoredTransaction();
         st.setId(UUID.randomUUID());
@@ -71,6 +79,9 @@ public class BudgetAggregateService {
         st.setLocalScore(event.localScore());
         st.setSustainabilityScore(event.sustainabilityScore());
         st.setLocalIndependent(event.localIndependent());
+        st.setConfidence(event.confidence());
+        st.setInstitutionName(event.institutionName());
+        st.setExcludedFromSpend(excluded);
 
         try {
             repository.save(st);
@@ -79,9 +90,12 @@ public class BudgetAggregateService {
         }
 
         // Maintain the per-category rollup incrementally (safe: only new rows reach here).
-        String category = event.category() != null ? event.category() : "Other";
-        categoryRollupRepository.accumulate(event.userId(), yearMonth, category, event.amount(),
-                event.amount().multiply(BigDecimal.valueOf(event.sustainabilityScore())));
+        // Transfers are excluded so they never appear in the category breakdown chart.
+        if (!excluded) {
+            String category = event.category() != null ? event.category() : "Other";
+            categoryRollupRepository.accumulate(event.userId(), yearMonth, category, event.amount(),
+                    event.amount().multiply(BigDecimal.valueOf(event.sustainabilityScore())));
+        }
 
         invalidate(event.userId(), yearMonth);
         // Notify the dashboard (SSE) that this user's month changed — dashboard listens.
@@ -138,24 +152,41 @@ public class BudgetAggregateService {
         List<ScoredTransaction> rows = repository.findByUserIdAndYearMonth(userId, yearMonth);
 
         BigDecimal total = BigDecimal.ZERO;
-        BigDecimal localWeighted = BigDecimal.ZERO;        // sum(amount * localScore)
+        BigDecimal confWeight = BigDecimal.ZERO;           // sum(amount * confidence)
+        BigDecimal localWeighted = BigDecimal.ZERO;        // sum(amount * confidence * localScore)
         BigDecimal sustainabilityWeighted = BigDecimal.ZERO;
         BigDecimal localIndependentSpend = BigDecimal.ZERO;
+        BigDecimal scoredSpend = BigDecimal.ZERO;          // spend we're actually confident about
+        int spendCount = 0;
 
         for (ScoredTransaction st : rows) {
+            if (st.isExcludedFromSpend()) {
+                continue;   // transfers are shown in the ledger but never counted as spend
+            }
             BigDecimal amount = st.getAmount();
+            // Weight each transaction by confidence so a grounded score counts fully and a guess
+            // (neutral fallback / category prior) barely moves the average.
+            BigDecimal weight = amount.multiply(BigDecimal.valueOf(st.getConfidence()));
             total = total.add(amount);
-            localWeighted = localWeighted.add(amount.multiply(BigDecimal.valueOf(st.getLocalScore())));
+            confWeight = confWeight.add(weight);
+            localWeighted = localWeighted.add(weight.multiply(BigDecimal.valueOf(st.getLocalScore())));
             sustainabilityWeighted =
-                    sustainabilityWeighted.add(amount.multiply(BigDecimal.valueOf(st.getSustainabilityScore())));
+                    sustainabilityWeighted.add(weight.multiply(BigDecimal.valueOf(st.getSustainabilityScore())));
             if (st.isLocalIndependent()) {
                 localIndependentSpend = localIndependentSpend.add(amount);
             }
+            if (st.getConfidence() >= COVERAGE_FLOOR) {
+                scoredSpend = scoredSpend.add(amount);
+            }
+            spendCount++;
         }
 
-        // localImpactPct = sum(amount*score/100)/total*100 = sum(amount*score)/total.
-        double localPct = pct(localWeighted, total);
-        double sustainabilityPct = pct(sustainabilityWeighted, total);
+        // Confidence-weighted average score = sum(amount*conf*score) / sum(amount*conf).
+        double localPct = pct(localWeighted, confWeight);
+        double sustainabilityPct = pct(sustainabilityWeighted, confWeight);
+        // Coverage = share of spend scored above the confidence floor (0–100).
+        double scoredSharePct = total.signum() <= 0 ? 0.0
+                : Math.round(scoredSpend.divide(total, 4, RoundingMode.HALF_UP).doubleValue() * 1000.0) / 10.0;
 
         return new BudgetAggregate(
                 userId,
@@ -164,7 +195,8 @@ public class BudgetAggregateService {
                 localPct,
                 sustainabilityPct,
                 localIndependentSpend.setScale(2, RoundingMode.HALF_UP),
-                rows.size());
+                spendCount,
+                scoredSharePct);
     }
 
     private double pct(BigDecimal weighted, BigDecimal total) {
@@ -173,6 +205,18 @@ public class BudgetAggregateService {
         }
         double raw = weighted.divide(total, 4, RoundingMode.HALF_UP).doubleValue();
         return Math.round(raw * 10.0) / 10.0;   // one decimal place
+    }
+
+    /** Drop every cached month for a user (used after a bulk re-categorization). */
+    public void invalidateUser(String userId) {
+        try {
+            java.util.Set<String> keys = redis.keys("budget:" + userId + ":*");
+            if (keys != null && !keys.isEmpty()) {
+                redis.delete(keys);
+            }
+        } catch (Exception e) {
+            log.warn("Redis bulk invalidate failed for {} ({})", userId, e.toString());
+        }
     }
 
     private void invalidate(String userId, String yearMonth) {

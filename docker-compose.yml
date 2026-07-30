@@ -94,6 +94,7 @@ services:
       PLAID_SECRET: ${PLAID_SECRET:-}
       PLAID_ENV: ${PLAID_ENV:-sandbox}
       PLAID_WEBHOOK_URL: ${PLAID_WEBHOOK_URL:-}
+      PLAID_REDIRECT_URI: ${PLAID_REDIRECT_URI:-}
     extra_hosts:
       # Lets OLLAMA_BASE_URL=host.docker.internal resolve on Linux (works natively on Mac/Win).
       - "host.docker.internal:host-gateway"

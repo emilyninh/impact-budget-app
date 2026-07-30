@@ -23,6 +23,7 @@ public record TransactionScored(
         int sustainabilityScore,
         List<String> materialFlags,
         double confidence,
-        String source
+        String source,
+        String institutionName   // source bank (e.g. "Chase", "Capital One"); may be null
 ) {
 }

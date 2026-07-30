@@ -57,6 +57,18 @@ public class BankTransaction {
     @Column(name = "plaid_category")
     private String plaidCategory;
 
+    /** Plaid's finer {@code personal_finance_category.detailed}, e.g. FOOD_AND_DRINK_GROCERIES. */
+    @Column(name = "plaid_category_detailed")
+    private String plaidCategoryDetailed;
+
+    /** Merchant website domain from Plaid (e.g. simpleecology.com); used for web-signal scoring. */
+    @Column(name = "merchant_website")
+    private String merchantWebsite;
+
+    /** Plaid's stable merchant entity id, when available. */
+    @Column(name = "merchant_entity_id")
+    private String merchantEntityId;
+
     @Column(name = "location_city")
     private String locationCity;
 
@@ -148,6 +160,30 @@ public class BankTransaction {
 
     public void setPlaidCategory(String plaidCategory) {
         this.plaidCategory = plaidCategory;
+    }
+
+    public String getPlaidCategoryDetailed() {
+        return plaidCategoryDetailed;
+    }
+
+    public void setPlaidCategoryDetailed(String plaidCategoryDetailed) {
+        this.plaidCategoryDetailed = plaidCategoryDetailed;
+    }
+
+    public String getMerchantWebsite() {
+        return merchantWebsite;
+    }
+
+    public void setMerchantWebsite(String merchantWebsite) {
+        this.merchantWebsite = merchantWebsite;
+    }
+
+    public String getMerchantEntityId() {
+        return merchantEntityId;
+    }
+
+    public void setMerchantEntityId(String merchantEntityId) {
+        this.merchantEntityId = merchantEntityId;
     }
 
     public String getLocationCity() {

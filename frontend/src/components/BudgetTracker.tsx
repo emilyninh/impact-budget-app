@@ -16,6 +16,13 @@ const STATUS_LABEL: Record<BudgetStatusKind, string> = {
   NO_BUDGET: "No budget set",
 };
 
+/** "2026-07" → "July 2026" — anchors the whole dashboard to the period it describes. */
+function formatMonth(yearMonth: string): string {
+  const [y, m] = yearMonth.split("-").map(Number);
+  if (!y || !m) return yearMonth;
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
 export function BudgetTracker({
   budget,
   onSetBudget,
@@ -35,7 +42,10 @@ export function BudgetTracker({
   return (
     <section className="card">
       <div className="goal-head">
-        <h2 style={{ margin: 0 }}>Monthly budget</h2>
+        <div>
+          <h2 style={{ margin: 0 }}>Monthly budget</h2>
+          <span className="muted budget-month">{formatMonth(budget.yearMonth)}</span>
+        </div>
         {hasLimit && (
           <span className="budget-status" style={{ color, borderColor: color }}>
             {STATUS_LABEL[budget.status]}

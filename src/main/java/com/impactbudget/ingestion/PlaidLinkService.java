@@ -52,6 +52,10 @@ public class PlaidLinkService {
         }
         item.setUserId(userId);
         item.setAccessToken(result.accessToken());
+        // Capture the institution name (e.g. "Chase") so transactions can be labeled by account.
+        if (!org.springframework.util.StringUtils.hasText(item.getInstitutionName())) {
+            item.setInstitutionName(plaidGateway.fetchInstitutionName(result.accessToken()));
+        }
         // Open a backfill window: Plaid readies transactions asynchronously, so if the first
         // sync comes back empty the scheduled PlaidBackfillJob keeps retrying until they arrive.
         item.setBackfillUntil(Instant.now().plus(BACKFILL_WINDOW));

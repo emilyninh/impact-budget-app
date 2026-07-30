@@ -93,7 +93,7 @@ public class CapitalOneImportService {
 
                 eventPublisher.publishIngested(new TransactionIngested(
                         txnId, userId, description, null, amount, "USD", date, null, null,
-                        category.isEmpty() ? null : category));
+                        category.isEmpty() ? null : category, null, "Capital One", null));
                 imported++;
             }
         }

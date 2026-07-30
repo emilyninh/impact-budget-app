@@ -28,7 +28,7 @@ class RecommendationServiceTest {
 
     private ScoredTransactionView txn(String merchant, String category, int sustainability) {
         return new ScoredTransactionView(merchant, category, LocalDate.of(2026, 7, 1),
-                new BigDecimal("40.00"), 20, sustainability, false);
+                new BigDecimal("40.00"), 20, sustainability, false, "Chase", false);
     }
 
     @Test

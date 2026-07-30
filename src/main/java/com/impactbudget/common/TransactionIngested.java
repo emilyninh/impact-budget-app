@@ -22,6 +22,9 @@ public record TransactionIngested(
         LocalDate txnDate,
         String locationCity,
         String locationRegion,
-        String sourceCategory   // bank-provided category (Plaid PFC or a CSV column), used as a scoring hint; may be null
+        String sourceCategory,          // bank-provided category (Plaid PFC primary or a CSV column), a scoring/taxonomy hint; may be null
+        String sourceCategoryDetailed,  // Plaid PFC detailed (e.g. FOOD_AND_DRINK_GROCERIES); null for CSV/demo
+        String institutionName,         // source bank (e.g. "Chase", "Capital One"); may be null
+        String merchantWebsite          // merchant domain from Plaid (e.g. simpleecology.com); may be null
 ) {
 }

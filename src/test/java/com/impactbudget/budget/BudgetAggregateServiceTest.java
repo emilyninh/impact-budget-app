@@ -5,6 +5,7 @@ import com.impactbudget.common.TransactionScored;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -44,6 +45,11 @@ class BudgetAggregateServiceTest {
     }
 
     private ScoredTransaction row(String amount, int local, int sustainability, boolean independent) {
+        return row(amount, local, sustainability, independent, 1.0);
+    }
+
+    private ScoredTransaction row(String amount, int local, int sustainability, boolean independent,
+                                  double confidence) {
         ScoredTransaction st = new ScoredTransaction();
         st.setId(UUID.randomUUID());
         st.setTransactionId(UUID.randomUUID());
@@ -53,6 +59,7 @@ class BudgetAggregateServiceTest {
         st.setLocalScore(local);
         st.setSustainabilityScore(sustainability);
         st.setLocalIndependent(independent);
+        st.setConfidence(confidence);
         return st;
     }
 
@@ -83,11 +90,71 @@ class BudgetAggregateServiceTest {
         // Negative amount = money in; must not create a scored_transaction row.
         TransactionScored refund = new TransactionScored(
                 UUID.randomUUID(), "user-1", "Some Store", new BigDecimal("-25.00"), LocalDate.of(2026, 7, 3),
-                "Refund", 0, false, 0, List.of(), 0.5, "FALLBACK");
+                "Refund", 0, false, 0, List.of(), 0.5, "FALLBACK", "Chase");
 
         service.record(refund);
 
         verify(repository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void transferIsStoredButExcludedFromSpendAndCategoryRollup() {
+        UUID txnId = UUID.randomUUID();
+        lenient().when(redis.opsForValue()).thenReturn(valueOps);
+        when(repository.existsByTransactionId(txnId)).thenReturn(false);
+
+        // A Chase -> Fidelity transfer: a positive outflow, but not spending.
+        TransactionScored transfer = new TransactionScored(
+                txnId, "user-1", "Fidelity", new BigDecimal("500.00"), LocalDate.of(2026, 7, 5),
+                "Transfers", 40, false, 50, List.of(), 0.5, "LLM", "Chase");
+
+        service.record(transfer);
+
+        // Stored (so the ledger can show it) with the excluded flag set...
+        ArgumentCaptor<ScoredTransaction> saved = ArgumentCaptor.forClass(ScoredTransaction.class);
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().isExcludedFromSpend()).isTrue();
+        assertThat(saved.getValue().getInstitutionName()).isEqualTo("Chase");
+        // ...but never added to the category breakdown.
+        verify(categoryRollupRepository, never()).accumulate(
+                anyString(), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void confidenceWeightsGroundedScoresOverGuessesAndReportsCoverage() {
+        when(redis.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get(anyString())).thenReturn(null);
+        // $100 grounded (conf 0.9, sustainability 90) + $100 guessed (conf 0.2, sustainability 50).
+        when(repository.findByUserIdAndYearMonth("user-1", "2026-07")).thenReturn(List.of(
+                row("100.00", 80, 90, true, 0.9),
+                row("100.00", 40, 50, false, 0.2)));
+
+        BudgetAggregate agg = service.getMonthly("user-1", "2026-07");
+
+        // Plain mean would be 70; confidence-weighted = (100*.9*90 + 100*.2*50)/(100*.9 + 100*.2)
+        // = (8100 + 1000) / 110 = 82.7 — pulled toward the grounded score.
+        assertThat(agg.sustainabilityImpactPct()).isEqualTo(82.7);
+        // Only the grounded $100 clears the confidence floor → 50% of spend is "scored".
+        assertThat(agg.scoredSharePct()).isEqualTo(50.0);
+    }
+
+    @Test
+    void rebuildExcludesTransfersFromTotalsAndCount() {
+        when(redis.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get(anyString())).thenReturn(null);
+        ScoredTransaction transfer = row("500.00", 40, 50, false);
+        transfer.setExcludedFromSpend(true);   // a stored transfer
+        when(repository.findByUserIdAndYearMonth("user-1", "2026-07")).thenReturn(List.of(
+                row("100.00", 100, 80, true),
+                transfer));
+
+        BudgetAggregate agg = service.getMonthly("user-1", "2026-07");
+
+        // Only the $100 spend row counts; the transfer is invisible to the budget math.
+        assertThat(agg.totalSpend()).isEqualByComparingTo("100.00");
+        assertThat(agg.transactionCount()).isEqualTo(1);
+        assertThat(agg.localImpactPct()).isEqualTo(100.0);
     }
 
     @Test
@@ -98,7 +165,7 @@ class BudgetAggregateServiceTest {
 
         TransactionScored event = new TransactionScored(
                 txnId, "user-1", "Coffee Shop", new BigDecimal("10.00"), LocalDate.of(2026, 7, 3),
-                "Coffee", 90, true, 60, List.of(), 0.7, "LLM");
+                "Coffee", 90, true, 60, List.of(), 0.7, "LLM", "Chase");
 
         service.record(event);
 

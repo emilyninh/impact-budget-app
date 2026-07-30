@@ -48,6 +48,7 @@ function Dashboard() {
   const [budget, setBudgetState] = useState<BudgetStatus | null>(null);
   const [categories, setCategories] = useState<CategoryBreakdown[]>([]);
   const [swaps, setSwaps] = useState<Swap[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [live, setLive] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,13 +160,34 @@ function Dashboard() {
         </div>
       )}
 
-      {summary && <ImpactSummary summary={summary} />}
+      {/* The frame: the period and the budget give every figure below them meaning. */}
+      {(budget || summary) && <p className="section-label">This month</p>}
       <BudgetTracker budget={budget} onSetBudget={onSetBudget} />
-      <CategoryChart categories={categories} />
+      {summary && <ImpactSummary summary={summary} />}
+
+      {/* Where it went: the category detail, then how the split moves over time. */}
+      {(categories.length > 0 || trend.length > 0) && (
+        <p className="section-label">Where your money went</p>
+      )}
+      <CategoryChart
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onSelect={setSelectedCategory}
+      />
       {trend.length > 0 && <TrendChart trend={trend} />}
+
+      {/* What to do about it. */}
+      <p className="section-label">What to do</p>
       <GreenerSwaps swaps={swaps} />
       <GoalTracker goals={goals} onCreate={onCreateGoal} />
-      <TransactionList transactions={transactions} />
+
+      {/* The ledger. */}
+      <p className="section-label">Records</p>
+      <TransactionList
+        transactions={transactions}
+        filterCategory={selectedCategory}
+        onClearFilter={() => setSelectedCategory(null)}
+      />
     </div>
   );
 }

@@ -9,6 +9,8 @@ public interface ScoredTransactionRepository extends JpaRepository<ScoredTransac
 
     boolean existsByTransactionId(UUID transactionId);
 
+    List<ScoredTransaction> findByUserId(String userId);
+
     List<ScoredTransaction> findByUserIdAndYearMonth(String userId, String yearMonth);
 
     List<ScoredTransaction> findByUserIdAndYearMonthOrderByTxnDateDesc(String userId, String yearMonth);
