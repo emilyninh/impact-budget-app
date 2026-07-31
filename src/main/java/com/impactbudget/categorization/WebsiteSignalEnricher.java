@@ -141,8 +141,11 @@ public class WebsiteSignalEnricher {
             String source = MerchantScoring.SOURCE_FALLBACK.equals(base.source())
                     ? MerchantScoring.SOURCE_WEB : base.source();
             String rationale = rationale(candidate.domain(), flags, content, base);
+            // Prefer the real merchant name over the raw descriptor for display (the base fallback
+            // leaves cleanedMerchant = the raw string like "SP LINA LENNOX").
+            String cleaned = StringUtils.hasText(merchantName) ? merchantName : base.cleanedMerchant();
 
-            return new MerchantScoring(base.cleanedMerchant(), base.category(),
+            return new MerchantScoring(cleaned, base.category(),
                     localScore, localIndependent, sustainability, List.copyOf(flags),
                     Math.max(base.confidence(), 0.7), rationale, source);
         } catch (Exception e) {
