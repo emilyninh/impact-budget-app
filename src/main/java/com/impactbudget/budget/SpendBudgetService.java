@@ -94,9 +94,15 @@ public class SpendBudgetService {
         return LocalDate.now().getDayOfMonth();  // current month, so far
     }
 
-    /** Extrapolate month-end spend from the daily pace; actual total for a complete/empty month. */
+    /** Days into a month before a daily-pace extrapolation is stable enough to report; before this
+     *  the rate is dominated by noise (day 1 would project a full month's spend × 31). */
+    private static final int MIN_DAYS_FOR_PROJECTION = 7;
+
+    /** Extrapolate month-end spend from the daily pace once a week's worth of days has elapsed;
+     *  earlier in the month (or for a complete/empty month) just report the actual total, so the
+     *  card never shows a wild day-1 projection. */
     private BigDecimal project(BigDecimal spent, int daysElapsed, int daysInMonth) {
-        if (daysElapsed <= 0 || daysElapsed >= daysInMonth) {
+        if (daysElapsed < MIN_DAYS_FOR_PROJECTION || daysElapsed >= daysInMonth) {
             return spent.setScale(2, RoundingMode.HALF_UP);
         }
         return spent.multiply(BigDecimal.valueOf(daysInMonth))

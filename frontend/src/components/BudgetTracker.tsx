@@ -66,15 +66,15 @@ export function BudgetTracker({
           </div>
           <div className="budget-facts">
             <span>{budget.pctUsed.toFixed(0)}% used</span>
-            <span>·</span>
+            <span className="budget-sep" aria-hidden="true">·</span>
             <span>{daysLeft} days left</span>
-            <span>·</span>
+            <span className="budget-sep" aria-hidden="true">·</span>
             <span>
               projected {formatUsd(budget.projectedSpend)} by month-end
             </span>
             {budget.remaining != null && (
               <>
-                <span>·</span>
+                <span className="budget-sep" aria-hidden="true">·</span>
                 <span style={{ color }}>
                   {budget.remaining >= 0
                     ? `${formatUsd(budget.remaining)} left`

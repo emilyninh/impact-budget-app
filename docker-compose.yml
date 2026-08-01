@@ -81,7 +81,9 @@ services:
       SCORING_PROVIDER: ${SCORING_PROVIDER:-ollama}
       # Reach an Ollama server running on the host machine from inside the container.
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      # qwen2.5 is the default: strong at tool-calling + faithful with figures (used by both the
+      # merchant scorer and the chat assistant). Pull it once with `ollama pull qwen2.5`.
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5}
       OPENFOODFACTS_ENABLED: ${OPENFOODFACTS_ENABLED:-true}
       # Export traces (OTLP/HTTP) to Tempo so the Kafka pipeline shows up in Grafana.
       OTLP_ENDPOINT: ${OTLP_ENDPOINT:-http://tempo:4318/v1/traces}

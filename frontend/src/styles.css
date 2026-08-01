@@ -36,10 +36,33 @@
   --chart-5: #9c36b5;
   --chart-6: #495057;
 
-  /* ── Elevation — the one sanctioned shadow (selection only) ── */
+  /* ── Elevation — sanctioned shadows only ─────────────────────
+     Selection marks "which one is chosen"; float is for the one
+     genuinely floating surface (the Assistant widget), introduced
+     deliberately per DESIGN.md → Elevation. Ink-tinted, not black. */
   --shadow-selection: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-float: 0 6px 24px rgba(28, 34, 48, 0.14), 0 2px 6px rgba(28, 34, 48, 0.08);
+
+  /* ── Semantic z-index scale ──────────────────────────────────
+     The scale DESIGN.md prescribes for the first floating layer.
+     The Assistant widget rides --z-overlay (non-modal, no backdrop). */
+  --z-dropdown: 1000;
+  --z-sticky: 1010;
+  --z-overlay: 1020;
+  --z-modal: 1030;
+  --z-toast: 1040;
+  --z-tooltip: 1050;
 
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Consistent, high-contrast keyboard focus across the app — closes the
+   :focus-visible gap noted in DESIGN.md. Neutral ink ring (chrome, not a
+   claim), sitting just outside the control so it shows on any fill. */
+:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+  border-radius: inherit;
 }
 
 * {
@@ -258,18 +281,151 @@ body {
   margin-bottom: 16px;
 }
 
-/* Assistant — grounded chat. Neutral chrome only (the Assertion Rule: no accent tint on
-   bubbles; color is reserved for figures that make a claim). */
-.assistant-intro {
-  margin: -8px 0 14px;
+/* ── Assistant — floating chat widget ────────────────────────────────
+   The system's first floating surface (DESIGN.md → Elevation). Neutral
+   chrome only (Assertion Rule: no accent tint; color is for data claims).
+   Launcher + panel are position:fixed at --z-overlay; non-modal. */
+
+.assistant-launcher {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: var(--z-overlay);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--text);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-float);
+  transition:
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 160ms ease;
+}
+
+.assistant-launcher:hover {
+  transform: translateY(-1px);
+  background: #10151f;
+}
+
+.assistant-launcher svg {
+  display: block;
+}
+
+.assistant-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: var(--z-overlay);
+  width: min(380px, calc(100vw - 32px));
+  height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-float);
+  overflow: hidden;
+  transform-origin: bottom right;
+  animation: assistant-open 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes assistant-open {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.assistant-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.assistant-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.assistant-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.assistant-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.assistant-clear {
+  border: none;
+  background: none;
+  color: var(--muted);
   font-size: 13px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.assistant-clear:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.assistant-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.assistant-close:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.assistant-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.assistant-intro {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .assistant-seeds {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
-  margin-bottom: 14px;
 }
 
 .assistant-seed {
@@ -277,13 +433,18 @@ body {
   background: var(--card);
   color: var(--text);
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 7px 13px;
   font-size: 13px;
+  text-align: left;
   cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
 }
 
 .assistant-seed:hover {
   background: var(--hover);
+  border-color: var(--muted);
 }
 
 .assistant-seed:disabled {
@@ -294,16 +455,28 @@ body {
 .assistant-log {
   list-style: none;
   padding: 0;
-  margin: 0 0 14px;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .assistant-msg {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  animation: assistant-msg-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes assistant-msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .assistant-role {
@@ -324,13 +497,44 @@ body {
   color: var(--slate);
 }
 
+/* Thinking — a soft blinking caret, like a calibrated instrument's cursor. */
+.assistant-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.assistant-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  background: var(--muted);
+  border-radius: 1px;
+  animation: caret-blink 1.1s ease-in-out infinite;
+}
+
+@keyframes caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+
 .assistant-form {
   display: flex;
   gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
 }
 
 .assistant-input {
   flex: 1;
+  min-width: 0;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   padding: 10px 12px;
@@ -340,7 +544,8 @@ body {
 }
 
 .assistant-send {
-  padding: 10px 18px;
+  flex-shrink: 0;
+  padding: 10px 16px;
   border: none;
   border-radius: 8px;
   background: var(--text);
@@ -352,6 +557,50 @@ body {
 .assistant-send:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.assistant-body .error {
+  margin: 14px 0 0;
+}
+
+/* Mobile — a near-fullscreen sheet, icon-only launcher. */
+@media (max-width: 480px) {
+  .assistant-panel {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+    height: min(80vh, 620px);
+  }
+
+  .assistant-launcher {
+    padding: 12px;
+  }
+
+  .assistant-launcher-label {
+    display: none;
+  }
+}
+
+/* Reduced motion — no slide or pulse; states change instantly. */
+@media (prefers-reduced-motion: reduce) {
+  .assistant-panel,
+  .assistant-msg {
+    animation: none;
+  }
+
+  .assistant-caret {
+    animation: none;
+    opacity: 1;
+  }
+
+  .assistant-launcher {
+    transition: none;
+  }
+
+  .assistant-launcher:hover {
+    transform: none;
+  }
 }
 
 /* Stat tiles */
@@ -381,18 +630,23 @@ body {
 .goal-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 16px;
+  margin: 0 0 20px;
 }
 
 .goal {
-  padding: 12px 0;
+  padding: 16px 0;
   border-top: 1px solid var(--border);
 }
 
 .goal-head {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+/* Breathing room between a goal's bar and its baseline/target line. */
+.goal .stat-hint {
+  margin-top: 10px;
 }
 
 .goal-title {
@@ -488,7 +742,7 @@ td.merchant {
 
 /* Legend explaining the 0–100 score axes, sits under the Transactions heading. */
 .table-note {
-  margin: -8px 0 16px;
+  margin: 6px 0 16px;
   font-size: 13px;
   max-width: 68ch;
 }
@@ -563,7 +817,7 @@ td.merchant {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin: -4px 0 16px;
+  margin: 10px 0 18px;
 }
 
 .filter-chip {
@@ -717,8 +971,16 @@ td.merchant {
 .budget-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  align-items: baseline;
+  column-gap: 14px;
+  row-gap: 6px;
+  margin: 14px 0 6px;
   font-size: 13px;
+  line-height: 1.5;
   color: var(--muted);
+}
+
+/* The "·" separators recede so the four facts read as distinct items, not one run. */
+.budget-sep {
+  opacity: 0.5;
 }

@@ -53,6 +53,17 @@ class SpendBudgetServiceTest {
     }
 
     @Test
+    void doesNotExtrapolateInTheFirstWeek() {
+        // Day 1: a naive daily-pace projection would report ~$27k (871.45 × 31); before a week has
+        // elapsed the rate is noise, so report the actual spend instead — and no bogus AT_RISK.
+        BudgetStatus s = service.evaluate("u", "2026-08",
+                new BigDecimal("871.45"), new BigDecimal("1000.00"), 1, 31);
+
+        assertThat(s.projectedSpend()).isEqualByComparingTo("871.45");
+        assertThat(s.status()).isEqualTo(BudgetStatus.Status.ON_TRACK);
+    }
+
+    @Test
     void noLimitYieldsNoBudgetStatus() {
         BudgetStatus s = service.evaluate("u", "2026-07",
                 new BigDecimal("123.45"), null, 15, 30);

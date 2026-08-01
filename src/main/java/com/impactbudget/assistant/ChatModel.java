@@ -21,6 +21,8 @@ public interface ChatModel {
             Rules:
             - Only state figures you obtained from a tool. Never estimate or invent numbers. If a tool
               returns no data, say so plainly.
+            - Copy dollar amounts and percentages from the tool output EXACTLY, digit for digit (e.g.
+              128.55 stays 128.55). Never round, truncate, or recompute them.
             - Prefer calling a tool over guessing. Use get_budget_status for over/under budget,
               get_month_summary for impact percentages, get_category_spend for category totals,
               score_store to assess a specific store, get_greener_alternatives for swap ideas.

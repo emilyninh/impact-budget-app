@@ -130,6 +130,7 @@ function Dashboard() {
   }, [load]);
 
   return (
+    <>
     <div className="app">
       <header className="app-header">
         <div>
@@ -167,10 +168,6 @@ function Dashboard() {
       <BudgetTracker budget={budget} onSetBudget={onSetBudget} />
       {summary && <ImpactSummary summary={summary} />}
 
-      {/* Ask the data directly — grounded in the same figures shown above. */}
-      <p className="section-label">Assistant</p>
-      <AssistantChat send={sendChat} />
-
       {/* Where it went: the category detail, then how the split moves over time. */}
       {(categories.length > 0 || trend.length > 0) && (
         <p className="section-label">Where your money went</p>
@@ -195,5 +192,8 @@ function Dashboard() {
         onClearFilter={() => setSelectedCategory(null)}
       />
     </div>
+    {/* The app's one floating surface — a persistent, non-modal helper. */}
+    <AssistantChat send={sendChat} />
+    </>
   );
 }
