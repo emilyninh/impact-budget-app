@@ -72,6 +72,16 @@ export interface Swap {
   suggestions: GreenerAlternative[];
 }
 
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatResponse {
+  reply: string;
+  toolsUsed: string[];
+}
+
 export type BudgetStatusKind = "NO_BUDGET" | "OVER" | "AT_RISK" | "ON_TRACK";
 
 export interface BudgetStatus {

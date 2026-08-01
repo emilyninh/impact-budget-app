@@ -57,9 +57,10 @@ class DemoGoalSeeder implements ApplicationRunner {
         if (spendBudgetRepository.findByUserId(DEMO_USER).isPresent()) {
             return;
         }
-        // ~$500/month — demo spend is ~$411, so the tracker shows a meaningful ~82% bar.
-        spendBudgetService.setLimit(DEMO_USER, new BigDecimal("500.00"));
-        log.info("Demo seed: $500/month budget created for {}", DEMO_USER);
+        // ~$1,000/month — demo spend this month is ~$870 (with the sustainable-brand showcase), so
+        // the tracker shows a meaningful bar without the alarming red "over budget" state.
+        spendBudgetService.setLimit(DEMO_USER, new BigDecimal("1000.00"));
+        log.info("Demo seed: $1000/month budget created for {}", DEMO_USER);
     }
 
     private Goal goal(Goal.Dimension dimension, int baseline, int target, LocalDate targetDate) {

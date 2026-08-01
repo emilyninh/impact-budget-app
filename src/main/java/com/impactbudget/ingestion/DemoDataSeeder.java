@@ -98,6 +98,10 @@ class DemoDataSeeder implements ApplicationRunner {
                 d("ALBERTA COOP GROCERY", "Alberta Co-op Grocery", "63.20", "FOOD_AND_DRINK"),
                 d("WWW.SIMPLEECOLOGY.COM", "Simpleecology", "42.75", "GENERAL_MERCHANDISE"),
                 d("SP LINA LENNOX", "Lina Lennox", "89.60", "GENERAL_MERCHANDISE"),
+                // Sustainable brands curated in V16 (score + clean name via CuratedOverrideService).
+                d("OSEA MALIBU", "OSEA", "48.00", "GENERAL_MERCHANDISE"),
+                d("AVOCADO MATTRESS", "Avocado Mattress", "149.00", "GENERAL_MERCHANDISE"),
+                d("THRIVE MARKET", "Thrive Market", "67.50", "FOOD_AND_DRINK"),
                 d("ALLBIRDS", "Allbirds", "98.00"),
                 d("NUMI ORGANIC TEA", "Numi Organic Tea", "9.25"),
                 d("TRADER JOES 210", "Trader Joe's", "52.40"),

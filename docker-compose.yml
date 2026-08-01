@@ -90,6 +90,8 @@ services:
       DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-true}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-4-8}
+      # Grounded chat assistant: ollama (local/free, default) | claude (paid, needs the key above).
+      ASSISTANT_PROVIDER: ${ASSISTANT_PROVIDER:-ollama}
       PLAID_CLIENT_ID: ${PLAID_CLIENT_ID:-}
       PLAID_SECRET: ${PLAID_SECRET:-}
       PLAID_ENV: ${PLAID_ENV:-sandbox}

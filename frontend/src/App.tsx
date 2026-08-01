@@ -8,6 +8,7 @@ import {
   fetchSwaps,
   fetchTransactions,
   fetchTrend,
+  sendChat,
   setBudget,
 } from "./api";
 import type {
@@ -27,6 +28,7 @@ import { TrendChart } from "./components/TrendChart";
 import { GoalTracker } from "./components/GoalTracker";
 import { GreenerSwaps } from "./components/GreenerSwaps";
 import { TransactionList } from "./components/TransactionList";
+import { AssistantChat } from "./components/AssistantChat";
 import { LoginPage } from "./components/LoginPage";
 import { ConnectBank } from "./components/ConnectBank";
 import { useAuth } from "./AuthContext";
@@ -164,6 +166,10 @@ function Dashboard() {
       {(budget || summary) && <p className="section-label">This month</p>}
       <BudgetTracker budget={budget} onSetBudget={onSetBudget} />
       {summary && <ImpactSummary summary={summary} />}
+
+      {/* Ask the data directly — grounded in the same figures shown above. */}
+      <p className="section-label">Assistant</p>
+      <AssistantChat send={sendChat} />
 
       {/* Where it went: the category detail, then how the split moves over time. */}
       {(categories.length > 0 || trend.length > 0) && (

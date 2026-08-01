@@ -3,6 +3,8 @@ import type {
   BudgetAggregate,
   BudgetStatus,
   CategoryBreakdown,
+  ChatResponse,
+  ChatTurn,
   CreateGoalRequest,
   GoalProgress,
   ScoredTransactionView,
@@ -86,6 +88,14 @@ export function setBudget(monthlyLimit: number): Promise<BudgetStatus> {
   return request<BudgetStatus>("/budget", {
     method: "PUT",
     body: JSON.stringify({ monthlyLimit }),
+  });
+}
+
+// --- Assistant (grounded chat) ---------------------------------------------
+export function sendChat(messages: ChatTurn[]): Promise<ChatResponse> {
+  return request<ChatResponse>("/assistant/chat", {
+    method: "POST",
+    body: JSON.stringify({ messages }),
   });
 }
 
